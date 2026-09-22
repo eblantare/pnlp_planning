@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- Table des directions -->
+    <changeSet id="001-create-directions" author="pnlp">
+        <createTable tableName="directions">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="nom" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="code" type="VARCHAR(50)">
+                <constraints unique="true"/>
+            </column>
+            <column name="responsable" type="VARCHAR(255)"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+    </changeSet>
+
+    <!-- Table des districts -->
+    <changeSet id="002-create-districts" author="pnlp">
+        <createTable tableName="districts">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="nom" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="region" type="VARCHAR(100)"/>
+            <column name="direction_id" type="UUID">
+                <constraints foreignKeyName="fk_district_direction"
+                             references="directions(id)"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+    </changeSet>
+
+    <!-- Table des agents -->
+    <changeSet id="003-create-agents" author="pnlp">
+        <createTable tableName="agents">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="nom" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="prenom" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="email" type="VARCHAR(255)">
+                <constraints unique="true"/>
+            </column>
+            <column name="telephone" type="VARCHAR(20)"/>
+            <column name="poste" type="VARCHAR(100)"/>
+            <column name="direction_id" type="UUID">
+                <constraints foreignKeyName="fk_agent_direction"
+                             references="directions(id)"/>
+            </column>
+            <column name="district_id" type="UUID">
+                <constraints foreignKeyName="fk_agent_district"
+                             references="districts(id)"/>
+            </column>
+            <column name="actif" type="BOOLEAN" defaultValueBoolean="true"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+    </changeSet>
+
+    <!-- Table des utilisateurs -->
+    <!-- IMPORTANT: créée AVANT activites car activites référence utilisateurs -->
+    <changeSet id="007-create-utilisateurs" author="pnlp">
+        <createTable tableName="utilisateurs">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="username" type="VARCHAR(100)">
+                <constraints unique="true" nullable="false"/>
+            </column>
+            <column name="password" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="email" type="VARCHAR(255)">
+                <constraints unique="true"/>
+            </column>
+            <column name="role" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="agent_id" type="UUID">
+                <constraints foreignKeyName="fk_user_agent"
+                             references="agents(id)"/>
+            </column>
+            <column name="actif" type="BOOLEAN" defaultValueBoolean="true"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+    </changeSet>
+
+    <!-- Table des activités -->
+    <!-- AJOUT de la colonne created_by avec clé étrangère vers utilisateurs -->
+    <changeSet id="004-create-activites" author="pnlp">
+        <createTable tableName="activites">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="titre" type="VARCHAR(500)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="TEXT"/>
+            <column name="date_debut" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="date_fin" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="nombre_jours" type="INTEGER"/>
+            <column name="lieu" type="VARCHAR(255)"/>
+            <column name="source_financement" type="VARCHAR(255)"/>
+            <column name="statut" type="VARCHAR(50)" defaultValue="PLANIFIEE"/>
+            <column name="commentaires" type="TEXT"/>
+            <!-- ✅ COLONNE AJOUTÉE -->
+            <column name="created_by" type="UUID">
+                <constraints foreignKeyName="fk_activite_created_by"
+                             references="utilisateurs(id)"/>
+            </column>
+            <!-- ✅ FIN AJOUT -->
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+    </changeSet>
+
+    <!-- Table des affectations -->
+    <changeSet id="005-create-affectations" author="pnlp">
+        <createTable tableName="affectations">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="agent_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_affectation_agent"
+                             references="agents(id)"/>
+            </column>
+            <column name="activite_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_affectation_activite"
+                             references="activites(id)"/>
+            </column>
+            <column name="role" type="VARCHAR(100)"/>
+            <column name="date_affectation" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+        <addUniqueConstraint tableName="affectations"
+                             columnNames="agent_id, activite_id"
+                             constraintName="uk_affectation_agent_activite"/>
+    </changeSet>
+
+    <!-- Table des indisponibilités -->
+    <changeSet id="006-create-indisponibilites" author="pnlp">
+        <createTable tableName="indisponibilites">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="agent_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_indispo_agent"
+                             references="agents(id)"/>
+            </column>
+            <column name="date_debut" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="date_fin" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="motif" type="TEXT"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+    </changeSet>
+
+    <!-- Index -->
+    <changeSet id="008-create-indexes" author="pnlp">
+        <createIndex tableName="activites" indexName="idx_activites_date">
+            <column name="date_debut"/>
+            <column name="date_fin"/>
+        </createIndex>
+        <createIndex tableName="affectations" indexName="idx_affectations_agent">
+            <column name="agent_id"/>
+        </createIndex>
+        <createIndex tableName="affectations" indexName="idx_affectations_activite">
+            <column name="activite_id"/>
+        </createIndex>
+        <createIndex tableName="indisponibilites" indexName="idx_indispo_agent">
+            <column name="agent_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

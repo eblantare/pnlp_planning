@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- Données de test -->
+    <changeSet id="010-insert-directions" author="pnlp">
+        <insert tableName="directions">
+            <column name="nom" value="Coordination PNLP"/>
+            <column name="code" value="COORD"/>
+            <column name="responsable" value="Dr ATEKPE"/>
+        </insert>
+        <insert tableName="directions">
+            <column name="nom" value="Direction Régionale des Plateaux"/>
+            <column name="code" value="DR-PLATEAUX"/>
+            <column name="responsable" value="Mr LAWSON"/>
+        </insert>
+        <insert tableName="directions">
+            <column name="nom" value="Direction Régionale de la Kara"/>
+            <column name="code" value="DR-KARA"/>
+            <column name="responsable" value="Mr ALOWE"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="011-insert-agents" author="pnlp">
+        <insert tableName="agents">
+            <column name="nom" value="LAWSON"/>
+            <column name="prenom" value="Kossi"/>
+            <column name="email" value="lawson@pnlp.tg"/>
+            <column name="poste" value="Superviseur Plateaux"/>
+        </insert>
+        <insert tableName="agents">
+            <column name="nom" value="AGNAN DOM"/>
+            <column name="prenom" value="Jean"/>
+            <column name="email" value="agnan@pnlp.tg"/>
+            <column name="poste" value="Superviseur"/>
+        </insert>
+        <insert tableName="agents">
+            <column name="nom" value="BOUKPESSI"/>
+            <column name="prenom" value="Marie"/>
+            <column name="email" value="boukpessi@pnlp.tg"/>
+            <column name="poste" value="Coordinatrice"/>
+        </insert>
+        <insert tableName="agents">
+            <column name="nom" value="ATEKPE"/>
+            <column name="prenom" value="Dr"/>
+            <column name="email" value="atekpe@pnlp.tg"/>
+            <column name="poste" value="Coordonnateur PNLP"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

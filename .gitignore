@@ -1,0 +1,22 @@
+# Java / Maven
+target/
+out/
+*.class
+
+# Logs
+logs/
+*.log
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+node_modules/
+target/
+out/
+logs/
+.angular/

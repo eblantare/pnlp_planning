@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pnlp-postgres
+    environment:
+      POSTGRES_DB: pnlp_planning
+      POSTGRES_USER: pnlp_user
+      POSTGRES_PASSWORD: pnlp_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - pnlp-network
+
+  backend:
+    build: ./backend
+    container_name: pnlp-backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/pnlp_planning
+      SPRING_DATASOURCE_USERNAME: pnlp_user
+      SPRING_DATASOURCE_PASSWORD: pnlp_password
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    networks:
+      - pnlp-network
+
+  frontend:
+    build: ./frontend
+    container_name: pnlp-frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      - backend
+    networks:
+      - pnlp-network
+
+volumes:
+  postgres_data:
+
+networks:
+  pnlp-network:
+    driver: bridge
