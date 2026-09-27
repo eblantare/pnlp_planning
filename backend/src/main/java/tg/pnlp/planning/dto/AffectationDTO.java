@@ -1,6 +1,7 @@
 package tg.pnlp.planning.dto;
 
 import lombok.*;
+
 import java.util.UUID;
 
 @Data
@@ -14,4 +15,5 @@ public class AffectationDTO {
     private UUID activiteId;
     private String activiteTitre;
     private String role;
+    private String zoneAffectation;   // ✅ NOUVEAU
 }

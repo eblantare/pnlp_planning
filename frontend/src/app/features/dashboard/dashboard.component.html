@@ -1,4 +1,269 @@
 <div class="dashboard-container">
-    <h1>Dashboard</h1>
-    <p>Bienvenue sur le tableau de bord PNLP.</p>
+    <!-- ============================================================ -->
+    <!-- CHARGEMENT                                                    -->
+    <!-- ============================================================ -->
+    <div *ngIf="isLoading" class="loading-container">
+        <div class="spinner"></div>
+        <p>Chargement du tableau de bord...</p>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- CONTENU                                                       -->
+    <!-- ============================================================ -->
+    <div *ngIf="!isLoading" class="dashboard-content">
+
+        <!-- ========== KPI PRINCIPAUX ========== -->
+        <div class="kpi-row">
+            <div class="kpi-main-card kpi-green" routerLink="/planning">
+                <div class="kpi-main-icon"><i class="pi pi-briefcase"></i></div>
+                <div class="kpi-main-content">
+                    <span class="kpi-main-value">{{ stats.agentsEnMission }}</span>
+                    <span class="kpi-main-label">Agents en mission</span>
+                    <span class="kpi-main-detail">sur {{ stats.agentsActifs }} actifs</span>
+                </div>
+                <i class="pi pi-arrow-right kpi-arrow"></i>
+            </div>
+
+            <div class="kpi-main-card kpi-blue" routerLink="/planning">
+                <div class="kpi-main-icon"><i class="pi pi-calendar"></i></div>
+                <div class="kpi-main-content">
+                    <span class="kpi-main-value">{{ stats.totalActivites }}</span>
+                    <span class="kpi-main-label">Activités ce mois</span>
+                    <span class="kpi-main-detail">{{ stats.activitesEnCours }} en cours</span>
+                </div>
+                <i class="pi pi-arrow-right kpi-arrow"></i>
+            </div>
+
+            <div class="kpi-main-card kpi-orange" routerLink="/statistiques">
+                <div class="kpi-main-icon"><i class="pi pi-chart-pie"></i></div>
+                <div class="kpi-main-content">
+                    <span class="kpi-main-value">{{ stats.tauxOccupation }}%</span>
+                    <span class="kpi-main-label">Taux d'occupation</span>
+                    <span class="kpi-main-detail">Agents mobilisés</span>
+                </div>
+                <i class="pi pi-arrow-right kpi-arrow"></i>
+            </div>
+
+            <div class="kpi-main-card kpi-purple" routerLink="/utilisateurs">
+                <div class="kpi-main-icon"><i class="pi pi-users"></i></div>
+                <div class="kpi-main-content">
+                    <span class="kpi-main-value">{{ stats.utilisateursActifs }}</span>
+                    <span class="kpi-main-label">Utilisateurs actifs</span>
+                    <span class="kpi-main-detail">{{ stats.totalProfils }} profils</span>
+                </div>
+                <i class="pi pi-arrow-right kpi-arrow"></i>
+            </div>
+        </div>
+
+        <!-- ========== GRILLE PRINCIPALE ========== -->
+        <div class="main-grid">
+
+            <!-- COLONNE GAUCHE -->
+            <div class="left-column">
+
+                <!-- Activités en cours -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span class="card-icon card-icon-orange"><i class="pi pi-play-circle"></i></span>
+                            <div>
+                                <h3>Activités en cours</h3>
+                                <span class="card-subtitle">Missions actives aujourd'hui</span>
+                            </div>
+                        </div>
+                        <a routerLink="/planning" class="btn-link">Voir tout <i class="pi pi-arrow-right"></i></a>
+                    </div>
+                    <div class="card-body">
+                        <div *ngIf="activitesEnCours.length === 0" class="empty-state-small">
+                            <i class="pi pi-inbox"></i>
+                            <p>Aucune activité en cours</p>
+                        </div>
+                        <div *ngFor="let act of activitesEnCours" class="list-item">
+                            <div class="list-item-indicator indicator-orange"></div>
+                            <div class="list-item-content">
+                                <span class="list-item-title">{{ act.titre }}</span>
+                                <span class="list-item-meta">
+                                    <i class="pi pi-map-marker"></i> {{ act.lieu || 'Lieu non spécifié' }}
+                                    <span class="dot">•</span>
+                                    <i class="pi pi-users"></i> {{ act.agentNoms?.length || 0 }} agent(s)
+                                </span>
+                            </div>
+                            <span class="list-item-badge">Jusqu'au {{ formatDateShort(act.dateFin) }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Prochaines activités -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span class="card-icon card-icon-blue"><i class="pi pi-calendar-plus"></i></span>
+                            <div>
+                                <h3>Prochaines activités</h3>
+                                <span class="card-subtitle">À venir</span>
+                            </div>
+                        </div>
+                        <a routerLink="/planning" class="btn-link">Voir tout <i class="pi pi-arrow-right"></i></a>
+                    </div>
+                    <div class="card-body">
+                        <div *ngIf="prochainesActivites.length === 0" class="empty-state-small">
+                            <i class="pi pi-inbox"></i>
+                            <p>Aucune activité planifiée</p>
+                        </div>
+                        <div *ngFor="let act of prochainesActivites" class="list-item">
+                            <div class="list-item-indicator indicator-blue"></div>
+                            <div class="list-item-content">
+                                <span class="list-item-title">{{ act.titre }}</span>
+                                <span class="list-item-meta">
+                                    <i class="pi pi-calendar"></i> {{ formatDate(act.dateDebut) }}
+                                    <span class="dot">•</span>
+                                    <i class="pi pi-map-marker"></i> {{ act.lieu || 'Non spécifié' }}
+                                </span>
+                            </div>
+                            <span class="list-item-badge badge-planifiee">{{ act.nombreJours || 0 }}j</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Activités récentes -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span class="card-icon card-icon-green"><i class="pi pi-history"></i></span>
+                            <div>
+                                <h3>Activités récentes</h3>
+                                <span class="card-subtitle">Dernières créées</span>
+                            </div>
+                        </div>
+                        <a routerLink="/planning" class="btn-link">Voir tout <i class="pi pi-arrow-right"></i></a>
+                    </div>
+                    <div class="card-body">
+                        <div *ngFor="let act of activitesRecentes" class="recent-item">
+                            <div class="recent-statut" [ngClass]="getStatutClass(act.statut)">
+                                <i [class]="getStatutIcon(act.statut)"></i>
+                            </div>
+                            <div class="recent-content">
+                                <span class="recent-title">{{ act.titre }}</span>
+                                <span class="recent-meta">
+                                    {{ formatDate(act.dateDebut) }} — {{ getStatutLabel(act.statut) }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COLONNE DROITE -->
+            <div class="right-column">
+
+                <!-- Statistiques rapides -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span class="card-icon card-icon-purple"><i class="pi pi-chart-bar"></i></span>
+                            <div>
+                                <h3>Statistiques rapides</h3>
+                                <span class="card-subtitle">{{ getMoisNom(mois) }} {{ annee }}</span>
+                            </div>
+                        </div>
+                        <a routerLink="/statistiques" class="btn-link">Détails <i class="pi pi-arrow-right"></i></a>
+                    </div>
+                    <div class="card-body">
+                        <div class="mini-stats-grid">
+                            <div class="mini-stat">
+                                <span class="mini-stat-value">{{ stats.totalAgents }}</span>
+                                <span class="mini-stat-label">Agents</span>
+                            </div>
+                            <div class="mini-stat">
+                                <span class="mini-stat-value">{{ stats.agentsEnMission }}</span>
+                                <span class="mini-stat-label">En mission</span>
+                            </div>
+                            <div class="mini-stat">
+                                <span class="mini-stat-value">{{ stats.agentsDisponibles }}</span>
+                                <span class="mini-stat-label">Disponibles</span>
+                            </div>
+                            <div class="mini-stat">
+                                <span class="mini-stat-value">{{ stats.activitesPlanifiees }}</span>
+                                <span class="mini-stat-label">Planifiées</span>
+                            </div>
+                            <div class="mini-stat">
+                                <span class="mini-stat-value">{{ stats.activitesTerminees }}</span>
+                                <span class="mini-stat-label">Terminées</span>
+                            </div>
+                            <div class="mini-stat">
+                                <span class="mini-stat-value">{{ stats.totalUtilisateurs }}</span>
+                                <span class="mini-stat-label">Utilisateurs</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top agents du mois -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span class="card-icon card-icon-gold"><i class="pi pi-star-fill"></i></span>
+                            <div>
+                                <h3>Top agents du mois</h3>
+                                <span class="card-subtitle">Les plus sollicités</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div *ngIf="topAgents.length === 0" class="empty-state-small">
+                            <i class="pi pi-users"></i>
+                            <p>Aucune activité ce mois</p>
+                        </div>
+                        <div *ngFor="let item of topAgents; let i = index" class="top-agent-item">
+                            <div class="top-agent-rank" [ngClass]="'rank-' + (i + 1)">
+                                {{ i + 1 }}
+                            </div>
+                            <div class="top-agent-avatar">{{ getInitiales(item.agent) }}</div>
+                            <div class="top-agent-content">
+                                <span class="top-agent-name">{{ item.agent.prenom }} {{ item.agent.nom }}</span>
+                                <span class="top-agent-poste">{{ item.agent.poste || 'Agent' }}</span>
+                            </div>
+                            <div class="top-agent-count">
+                                <span class="top-agent-value">{{ item.nbActivites }}</span>
+                                <span class="top-agent-label">mission(s)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Accès rapides -->
+                <div class="card quick-actions-card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <span class="card-icon card-icon-teal"><i class="pi pi-bolt"></i></span>
+                            <div>
+                                <h3>Accès rapides</h3>
+                                <span class="card-subtitle">Raccourcis utiles</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="quick-actions-grid">
+                            <a routerLink="/planning" class="quick-action">
+                                <div class="quick-action-icon qa-green"><i class="pi pi-calendar-plus"></i></div>
+                                <span>Nouvelle activité</span>
+                            </a>
+                            <a routerLink="/agents" class="quick-action">
+                                <div class="quick-action-icon qa-blue"><i class="pi pi-user-plus"></i></div>
+                                <span>Nouvel agent</span>
+                            </a>
+                            <a routerLink="/utilisateurs" class="quick-action">
+                                <div class="quick-action-icon qa-purple"><i class="pi pi-users"></i></div>
+                                <span>Utilisateurs</span>
+                            </a>
+                            <a routerLink="/statistiques" class="quick-action">
+                                <div class="quick-action-icon qa-orange"><i class="pi pi-chart-line"></i></div>
+                                <span>Statistiques</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>

@@ -8,6 +8,7 @@ import tg.pnlp.planning.dto.AgentDTO;
 import tg.pnlp.planning.entity.Agent;
 import tg.pnlp.planning.exception.ResourceNotFoundException;
 import tg.pnlp.planning.repository.AgentRepository;
+import tg.pnlp.planning.exception.BusinessException;
 
 import java.util.List;
 import java.util.UUID;
@@ -21,7 +22,8 @@ public class AgentService {
     private final AgentRepository agentRepository;
 
     public List<AgentDTO> getAllAgents() {
-        return agentRepository.findByActifTrue().stream()
+        // ✅ Retourne TOUS les agents (actifs ET inactifs)
+        return agentRepository.findAll().stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
@@ -34,16 +36,25 @@ public class AgentService {
 
     @Transactional
     public AgentDTO createAgent(AgentDTO dto) {
+        // ✅ Vérifier si l'email existe déjà
+        if (dto.getEmail() != null && !dto.getEmail().trim().isEmpty()) {
+            if (agentRepository.existsByEmail(dto.getEmail())) {
+                throw new BusinessException("Un agent avec cet email existe déjà : " + dto.getEmail());
+            }
+        }
+
         Agent agent = Agent.builder()
                 .nom(dto.getNom())
                 .prenom(dto.getPrenom())
                 .email(dto.getEmail())
                 .telephone(dto.getTelephone())
                 .poste(dto.getPoste())
+                .unite(dto.getUnite())
+                .actif(false)
                 .build();
 
         agent = agentRepository.save(agent);
-        log.info("Agent créé: {}", agent.getNomComplet());
+        log.info("Agent créé (inactif): {} (Unité: {})", agent.getNomComplet(), agent.getUnite());
         return convertToDTO(agent);
     }
 
@@ -57,6 +68,7 @@ public class AgentService {
         agent.setEmail(dto.getEmail());
         agent.setTelephone(dto.getTelephone());
         agent.setPoste(dto.getPoste());
+        agent.setUnite(dto.getUnite());       // ✅ NOUVEAU
 
         agent = agentRepository.save(agent);
         return convertToDTO(agent);
@@ -79,7 +91,20 @@ public class AgentService {
                 .email(agent.getEmail())
                 .telephone(agent.getTelephone())
                 .poste(agent.getPoste())
+                .unite(agent.getUnite())        // ✅ NOUVEAU
                 .actif(agent.getActif())
                 .build();
+    }
+    @Transactional
+    public AgentDTO changerStatut(UUID id, Boolean actif) {
+        Agent agent = agentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Agent non trouvé: " + id));
+
+        agent.setActif(actif);
+        agent = agentRepository.save(agent);
+
+        log.info("Statut de l'agent {} changé en: {}",
+                agent.getNomComplet(), actif ? "ACTIF" : "INACTIF");
+        return convertToDTO(agent);
     }
 }

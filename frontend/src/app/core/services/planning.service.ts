@@ -2,20 +2,45 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { Agent } from './agent.service';
 
 export interface Activite {
     id?: string;
     titre: string;
-    description?: string;
-    dateDebut: string;
-    dateFin: string;
+    commentaires?: string;
+    // ✅ Dates OPTIONNELLES pour permettre les brouillons
+    dateDebut?: string;
+    dateFin?: string;
     nombreJours?: number;
     lieu?: string;
     sourceFinancement?: string;
     statut?: string;
-    commentaires?: string;
     agentIds?: string[];
     agentNoms?: string[];
+    agentZonesList?: (string | null)[];
+    agentIdsForces?: string[];
+    agentZones?: { [agentId: string]: string };
+    createdById?: string;
+    createdByNom?: string;
+}
+
+export interface ConflitAgent {
+    agentId: string;
+    agentNom: string;
+    agentPrenom: string;
+    agentPoste?: string;
+    typeConflit: 'AFFECTATION_SIMULTANEE' | 'INDISPONIBILITE';
+    activiteConflit?: string;
+    dateDebut?: string;
+    dateFin?: string;
+    motif?: string;
+}
+
+export interface ReponseCreationActivite {
+    succes: boolean;
+    activite?: Activite;
+    conflits: ConflitAgent[];
+    message: string;
 }
 
 export interface Disponibilite {
@@ -40,12 +65,12 @@ export class PlanningService {
 
     constructor(private http: HttpClient) { }
 
-    creerActivite(activite: Activite): Observable<Activite> {
-        return this.http.post<Activite>(`${this.apiUrl}/activites`, activite);
+    creerActivite(activite: Activite): Observable<ReponseCreationActivite> {
+        return this.http.post<ReponseCreationActivite>(`${this.apiUrl}/activites`, activite);
     }
 
-    updateActivite(id: string, activite: Activite): Observable<Activite> {
-        return this.http.put<Activite>(`${this.apiUrl}/activites/${id}`, activite);
+    updateActivite(id: string, activite: Activite): Observable<ReponseCreationActivite> {
+        return this.http.put<ReponseCreationActivite>(`${this.apiUrl}/activites/${id}`, activite);
     }
 
     changerStatut(id: string, statut: string): Observable<Activite> {
@@ -86,5 +111,12 @@ export class PlanningService {
             .set('annee', annee.toString())
             .set('mois', mois.toString());
         return this.http.get<PlanningMensuel>(`${this.apiUrl}/mensuel`, { params });
+    }
+
+    trouverRemplacants(debut: string, fin: string): Observable<Agent[]> {
+        const params = new HttpParams()
+            .set('debut', debut)
+            .set('fin', fin);
+        return this.http.get<Agent[]>(`${this.apiUrl}/remplacants`, { params });
     }
 }

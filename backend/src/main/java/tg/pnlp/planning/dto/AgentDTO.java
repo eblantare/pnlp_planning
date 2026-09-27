@@ -14,5 +14,6 @@ public class AgentDTO {
     private String email;
     private String telephone;
     private String poste;
+    private String unite;          // ✅ NOUVEAU
     private Boolean actif;
 }

@@ -1,0 +1,1247 @@
+/* ============================================================
+   CONTAINER & HEADER
+   ============================================================ */
+.page-container {
+    padding: 20px 24px;
+    max-width: 1500px;
+    margin: 0 auto;
+    background: #F8FAFB;
+    min-height: 100vh;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.page-header h1 {
+    color: #1B5E20;
+    margin: 0;
+    font-size: 26px;
+    font-weight: 700;
+}
+
+.subtitle {
+    color: #6B7280;
+    font-size: 13px;
+    margin-top: 4px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-export {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.btn-excel {
+    background: linear-gradient(135deg, #1D6F42 0%, #2E8B57 100%);
+    color: white;
+}
+
+.btn-excel:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(29, 111, 66, 0.4);
+}
+
+.btn-pdf {
+    background: linear-gradient(135deg, #C62828 0%, #E53935 100%);
+    color: white;
+}
+
+.btn-pdf:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(198, 40, 40, 0.4);
+}
+
+/* ============================================================
+   SÉLECTEUR DE PÉRIODE
+   ============================================================ */
+.period-selector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: white;
+    border-radius: 12px;
+    padding: 16px 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.period-nav-btn {
+    background: #F3F4F6;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: #1B5E20;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.period-nav-btn:hover {
+    background: #E8F5E9;
+    transform: scale(1.05);
+}
+
+.period-display {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 200px;
+    justify-content: center;
+}
+
+.period-month {
+    color: #1B5E20;
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.period-year {
+    color: #6B7280;
+    font-size: 18px;
+    font-weight: 500;
+}
+
+/* ============================================================
+   KPIs — sur une seule ligne (avec scroll horizontal)
+   ============================================================ */
+.kpi-grid {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 6px;
+    scroll-behavior: smooth;
+}
+
+/* Scrollbar personnalisée */
+.kpi-grid::-webkit-scrollbar {
+    height: 6px;
+}
+
+.kpi-grid::-webkit-scrollbar-track {
+    background: #F3F4F6;
+    border-radius: 3px;
+}
+
+.kpi-grid::-webkit-scrollbar-thumb {
+    background: #BDBDBD;
+    border-radius: 3px;
+}
+
+.kpi-grid::-webkit-scrollbar-thumb:hover {
+    background: #9CA3AF;
+}
+
+.kpi-card {
+    flex: 0 0 210px;              /* ✅ Largeur fixe pour chaque carte */
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    transition: all 0.25s;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.kpi-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.kpi-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.7);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.kpi-content {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.kpi-value {
+    font-size: 22px;
+    font-weight: 800;
+    color: #1B5E20;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.kpi-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: #6B7280;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Couleurs */
+.kpi-green { background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%); border-left: 4px solid #2E7D32; }
+.kpi-green .kpi-value { color: #2E7D32; }
+
+.kpi-blue { background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%); border-left: 4px solid #1565C0; }
+.kpi-blue .kpi-value { color: #1565C0; }
+
+.kpi-orange { background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%); border-left: 4px solid #E65100; }
+.kpi-orange .kpi-value { color: #E65100; }
+
+.kpi-purple { background: linear-gradient(135deg, #F3E5F5 0%, #E1BEE7 100%); border-left: 4px solid #6A1B9A; }
+.kpi-purple .kpi-value { color: #6A1B9A; }
+
+.kpi-teal { background: linear-gradient(135deg, #E0F2F1 0%, #B2DFDB 100%); border-left: 4px solid #00695C; }
+.kpi-teal .kpi-value { color: #00695C; }
+
+.kpi-red { background: linear-gradient(135deg, #FFEBEE 0%, #FFCDD2 100%); border-left: 4px solid #C62828; }
+.kpi-red .kpi-value { color: #C62828; }
+
+/* ============================================================
+   SECTIONS
+   ============================================================ */
+.section-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #E8F5E9;
+}
+
+.section-header h2 {
+    color: #1B5E20;
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.section-header h2 i {
+    color: #2E7D32;
+}
+
+.section-subtitle {
+    color: #6B7280;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+/* ============================================================
+   CARTES DES AGENTS AVEC SCROLL HORIZONTAL
+   ============================================================ */
+.agents-cards-scroll {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 8px 4px 16px 4px;
+    scroll-behavior: smooth;
+}
+
+.agents-cards-scroll::-webkit-scrollbar {
+    height: 8px;
+}
+
+.agents-cards-scroll::-webkit-scrollbar-track {
+    background: #F3F4F6;
+    border-radius: 4px;
+}
+
+.agents-cards-scroll::-webkit-scrollbar-thumb {
+    background: #BDBDBD;
+    border-radius: 4px;
+}
+
+.agents-cards-scroll::-webkit-scrollbar-thumb:hover {
+    background: #9CA3AF;
+}
+
+.agent-status-card {
+    flex: 0 0 260px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    background: #F9FAFB;
+    border-radius: 12px;
+    border-left: 4px solid #9CA3AF;
+    transition: all 0.2s;
+    position: relative;
+}
+
+.agent-status-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.agent-status-card.card-en-mission {
+    border-left-color: #F59E0B;
+    background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
+}
+
+.agent-status-card.card-disponible {
+    border-left-color: #10B981;
+    background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%);
+}
+
+.agent-status-card.card-inactif {
+    border-left-color: #9CA3AF;
+    background: #F9FAFB;
+    opacity: 0.7;
+}
+
+.agent-status-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.agent-status-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.agent-status-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.agent-status-poste {
+    font-size: 10px;
+    color: #6B7280;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.agent-status-stats {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.agent-status-days {
+    font-size: 18px;
+    font-weight: 800;
+    color: #1B5E20;
+    line-height: 1;
+}
+
+.agent-status-missions {
+    font-size: 9px;
+    color: #6B7280;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-top: 2px;
+}
+
+.agent-status-card {
+    flex: 0 0 260px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    background: #F9FAFB;
+    border-radius: 12px;
+    border-left: 4px solid #9CA3AF;
+    transition: all 0.2s;
+}
+
+.agent-status-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.agent-status-card.card-en-mission {
+    border-left-color: #F59E0B;
+    background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
+}
+
+.agent-status-card.card-disponible {
+    border-left-color: #10B981;
+    background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%);
+}
+
+.agent-status-card.card-inactif {
+    border-left-color: #9CA3AF;
+    background: #F9FAFB;
+    opacity: 0.7;
+}
+
+.agent-status-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.agent-status-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.agent-status-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.agent-status-poste {
+    font-size: 10px;
+    color: #6B7280;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ✅ Le badge est maintenant dans le flux (sous le poste) */
+.agent-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-size: 8px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    align-self: flex-start;
+    margin-top: 2px;
+}
+
+.agent-status-badge.badge-en-mission {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
+.agent-status-badge.badge-disponible {
+    background: #DCFCE7;
+    color: #15803D;
+}
+
+.agent-status-badge.badge-inactif {
+    background: #F3F4F6;
+    color: #6B7280;
+}
+
+.agent-status-stats {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    flex-shrink: 0;               /* ✅ Empêche l'écrasement */
+    margin-left: 8px;
+}
+
+.agent-status-days {
+    font-size: 18px;
+    font-weight: 800;
+    color: #1B5E20;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.agent-status-missions {
+    font-size: 9px;
+    color: #6B7280;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-top: 2px;
+    white-space: nowrap;
+}
+
+.agent-status-badge.badge-en-mission {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
+.agent-status-badge.badge-disponible {
+    background: #DCFCE7;
+    color: #15803D;
+}
+
+.agent-status-badge.badge-inactif {
+    background: #F3F4F6;
+    color: #6B7280;
+}
+
+/* ============================================================
+   GRAPHIQUE TAUX D'OCCUPATION PAR AGENT
+   ============================================================ */
+.occupation-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 8px 0;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.occupation-row {
+    display: grid;
+    grid-template-columns: 200px 1fr 70px;
+    align-items: center;
+    gap: 12px;
+}
+
+.occupation-agent {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.occupation-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.occupation-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.occupation-bar-wrapper {
+    height: 20px;
+    background: #F3F4F6;
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+}
+
+.occupation-bar {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.4s ease;
+    min-width: 2px;
+}
+
+.occupation-value {
+    font-size: 13px;
+    font-weight: 700;
+    text-align: right;
+}
+
+/* ============================================================
+   GRAPHIQUE RÉPARTITION MENSUELLE
+   ============================================================ */
+.chart-container {
+    padding: 20px 0 0 0;
+}
+
+.chart-bars {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 6px;
+    height: 200px;
+    padding: 0 10px;
+}
+
+.chart-bar-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+    gap: 4px;
+}
+
+.chart-value {
+    font-size: 11px;
+    font-weight: 700;
+    color: #6B7280;
+}
+
+.chart-bar {
+    width: 100%;
+    max-width: 40px;
+    min-height: 4px;
+    background: linear-gradient(180deg, #BBDEFB 0%, #90CAF9 100%);
+    border-radius: 4px 4px 0 0;
+    transition: all 0.3s ease;
+}
+
+.chart-bar.active {
+    background: linear-gradient(180deg, #2E7D32 0%, #1B5E20 100%);
+    box-shadow: 0 0 12px rgba(46, 125, 50, 0.4);
+}
+
+.chart-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6B7280;
+    text-transform: uppercase;
+}
+
+/* ============================================================
+   FILTRES
+   ============================================================ */
+.filters-card {
+    background: white;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.filters-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.filters-header h3 {
+    color: #333;
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-reset {
+    background: none;
+    border: 1px solid #ddd;
+    color: #666;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-reset:hover {
+    background: #E8F5E9;
+    color: #1B5E20;
+    border-color: #1B5E20;
+}
+
+.filters-grid-2 {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 12px;
+}
+
+.filter-group { display: flex; flex-direction: column; }
+
+.filter-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 4px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 13px;
+    transition: all 0.2s;
+    background: white;
+    box-sizing: border-box;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #1B5E20;
+    box-shadow: 0 0 0 3px rgba(27, 94, 32, 0.08);
+}
+
+/* ============================================================
+   TABLEAU
+   ============================================================ */
+.table-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 20px;
+    border-bottom: 1px solid #F3F4F6;
+    background: #FAFBFC;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.table-header-left { display: flex; align-items: center; gap: 12px; }
+
+.table-header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.page-size-label { font-size: 12px; color: #666; }
+
+.page-size {
+    padding: 6px 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    background: white;
+}
+
+.table-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.table-title i { color: #1B5E20; }
+
+.table-count {
+    background: #E8F5E9;
+    color: #1B5E20;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.table-responsive { overflow-x: auto; }
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.data-table thead {
+    background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+}
+
+.data-table th {
+    padding: 12px 10px;
+    text-align: left;
+    font-weight: 700;
+    color: #0D47A1;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #90CAF9;
+    white-space: nowrap;
+}
+
+.data-table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid #F3F4F6;
+    vertical-align: middle;
+}
+
+.data-row:hover { background: #F8F9FA; }
+
+.col-num { width: 50px; text-align: center; color: #9CA3AF; font-weight: 600; }
+.col-center { text-align: center; }
+
+.agent-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.agent-avatar-small {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.agent-cell strong {
+    color: #333;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.badge-count {
+    display: inline-block;
+    background: #E3F2FD;
+    color: #1565C0;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 12px;
+    min-width: 28px;
+}
+
+.badge-jours {
+    display: inline-block;
+    background: #E8F5E9;
+    color: #2E7D32;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 12px;
+    min-width: 32px;
+}
+
+.badge-statut {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.statut-en-mission { background: #FFF3E0; color: #E65100; }
+.statut-disponible { background: #E8F5E9; color: #2E7D32; }
+.statut-inactif { background: #F3F4F6; color: #6B7280; }
+
+.taux-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 120px;
+}
+
+.taux-bar {
+    flex: 1;
+    height: 8px;
+    background: #E5E7EB;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.taux-bar-fill {
+    height: 100%;
+    transition: all 0.3s ease;
+}
+
+.taux-value {
+    font-size: 12px;
+    font-weight: 700;
+    min-width: 45px;
+    text-align: right;
+}
+
+.activite-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-width: 250px;
+}
+
+.activite-cell strong {
+    color: #333;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.activite-periode {
+    font-size: 10px;
+    color: #9CA3AF;
+}
+
+.text-muted { color: #9CA3AF; }
+
+/* ============================================================
+   PAGINATION
+   ============================================================ */
+.pagination-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 20px;
+    border-top: 1px solid #F3F4F6;
+    background: #FAFBFC;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.pagination-info { font-size: 13px; color: #666; }
+
+.pagination { display: flex; align-items: center; gap: 4px; }
+
+.pagination-btn {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #333;
+    transition: all 0.15s;
+}
+
+.pagination-btn:hover:not(:disabled) {
+    background: #E8F5E9;
+    border-color: #1B5E20;
+    color: #1B5E20;
+}
+
+.pagination-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.pagination-numbers { display: flex; gap: 4px; margin: 0 8px; }
+
+.pagination-number {
+    min-width: 32px;
+    height: 32px;
+    border: 1px solid #ddd;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: #333;
+    transition: all 0.15s;
+}
+
+.pagination-number:hover {
+    background: #E8F5E9;
+    border-color: #1B5E20;
+    color: #1B5E20;
+}
+
+.pagination-number.active {
+    background: #1B5E20;
+    border-color: #1B5E20;
+    color: white;
+    font-weight: 700;
+}
+
+/* ============================================================
+   LOADING & EMPTY
+   ============================================================ */
+.loading-container {
+    text-align: center;
+    padding: 60px;
+    color: #6B7280;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #E8F5E9;
+    border-top-color: #1B5E20;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 16px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.empty-row { padding: 0 !important; }
+
+.empty-state {
+    text-align: center;
+    padding: 50px 20px;
+}
+
+.empty-icon {
+    font-size: 40px;
+    display: block;
+    margin-bottom: 14px;
+    color: #D1D5DB;
+}
+
+.empty-state p {
+    color: #9CA3AF;
+    font-size: 14px;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 1400px) {
+    .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 1200px) {
+    .filters-grid-2 { grid-template-columns: 1fr; }
+    .occupation-row { grid-template-columns: 150px 1fr 60px; }
+}
+
+@media (max-width: 768px) {
+    .page-container { padding: 14px; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .chart-bars { height: 150px; }
+    .chart-value { font-size: 10px; }
+    .chart-label { font-size: 9px; }
+    .page-header { flex-direction: column; align-items: stretch; }
+    .header-actions { justify-content: flex-end; }
+    .occupation-row { grid-template-columns: 120px 1fr 55px; }
+}
+/* ============================================================
+   ACCORDÉON
+   ============================================================ */
+.accordion-card {
+    padding: 0;
+    overflow: hidden;
+}
+
+.accordion-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    cursor: pointer;
+    transition: background 0.2s;
+    user-select: none;
+}
+
+.accordion-header:hover {
+    background: #FAFBFC;
+}
+
+.accordion-title {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.accordion-title h2 {
+    color: #1B5E20;
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.accordion-title h2 i {
+    color: #2E7D32;
+}
+
+.accordion-icon {
+    font-size: 16px;
+    color: #1B5E20;
+    transition: transform 0.2s;
+    font-weight: 700;
+}
+
+.accordion-content {
+    padding: 0 20px 20px 20px;
+    border-top: 1px solid #F3F4F6;
+    animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Ajustement du graphique dans l'accordéon */
+.occupation-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px 0 0 0;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.occupation-chart::-webkit-scrollbar {
+    width: 8px;
+}
+
+.occupation-chart::-webkit-scrollbar-track {
+    background: #F3F4F6;
+    border-radius: 4px;
+}
+
+.occupation-chart::-webkit-scrollbar-thumb {
+    background: #BDBDBD;
+    border-radius: 4px;
+}
+
+.occupation-chart::-webkit-scrollbar-thumb:hover {
+    background: #9CA3AF;
+}
+
+.occupation-row {
+    display: grid;
+    grid-template-columns: 200px 1fr 70px;
+    align-items: center;
+    gap: 12px;
+}
+
+.occupation-agent {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.occupation-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.occupation-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.occupation-bar-wrapper {
+    height: 20px;
+    background: #F3F4F6;
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+}
+
+.occupation-bar {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.4s ease;
+    min-width: 2px;
+}
+
+.occupation-value {
+    font-size: 13px;
+    font-weight: 700;
+    text-align: right;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .occupation-row { grid-template-columns: 150px 1fr 60px; }
+}
+
+@media (max-width: 768px) {
+    .occupation-row { grid-template-columns: 120px 1fr 55px; }
+    .accordion-header { padding: 14px 16px; }
+    .accordion-content { padding: 0 16px 16px 16px; }
+}
+/* Pagination dans l'accordéon */
+.accordion-content .pagination-container {
+    margin: 0 -20px -20px -20px;   /* Étend jusqu'aux bords */
+    border-radius: 0 0 12px 12px;
+}
+
+.accordion-content .table-responsive {
+    margin: 0 -20px;                /* Étend jusqu'aux bords */
+}
+
+/* Ajustement du graphique dans l'accordéon */
+.accordion-content .chart-container {
+    padding: 16px 0 0 0;
+}

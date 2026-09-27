@@ -1,0 +1,332 @@
+<div class="page-container">
+    <!-- En-tête -->
+    <div class="page-header">
+        <div>
+            <h1>Gestion du Personnel</h1>
+            <p class="subtitle">Gérer les agents du PNLP</p>
+        </div>
+        <p-button icon="pi pi-plus"
+                  [rounded]="true"
+                  severity="success"
+                  size="large"
+                  pTooltip="Nouvel agent"
+                  tooltipPosition="left"
+                  (onClick)="openCreateForm()">
+        </p-button>
+    </div>
+
+    <!-- Notifications -->
+    <div *ngIf="successMessage" class="alert alert-success">
+        <i class="pi pi-check-circle"></i> {{ successMessage }}
+    </div>
+    <div *ngIf="errorMessage" class="alert alert-danger">
+        <i class="pi pi-times-circle"></i> {{ errorMessage }}
+    </div>
+
+    <!-- Statistiques -->
+    <div class="stats-row">
+        <div class="stat-mini">
+            <span class="stat-mini-icon green"><i class="pi pi-users"></i></span>
+            <div class="stat-mini-info">
+                <span class="stat-mini-value">{{ allAgents.length }}</span>
+                <span class="stat-mini-label">Agents totaux</span>
+            </div>
+        </div>
+        <div class="stat-mini">
+            <span class="stat-mini-icon blue"><i class="pi pi-check-circle"></i></span>
+            <div class="stat-mini-info">
+                <span class="stat-mini-value">{{ countActifs() }}</span>
+                <span class="stat-mini-label">Actifs</span>
+            </div>
+        </div>
+        <div class="stat-mini">
+            <span class="stat-mini-icon orange"><i class="pi pi-briefcase"></i></span>
+            <div class="stat-mini-info">
+                <span class="stat-mini-value">{{ postes.length }}</span>
+                <span class="stat-mini-label">Postes</span>
+            </div>
+        </div>
+        <div class="stat-mini">
+            <span class="stat-mini-icon purple"><i class="pi pi-building"></i></span>
+            <div class="stat-mini-info">
+                <span class="stat-mini-value">{{ unites.length }}</span>
+                <span class="stat-mini-label">Unités</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="filters-card">
+        <div class="filters-header">
+            <h3><i class="pi pi-filter"></i> Filtres</h3>
+            <button *ngIf="hasActiveFilters()" class="btn-reset" (click)="resetFilters()">
+                <i class="pi pi-refresh"></i> Réinitialiser
+            </button>
+        </div>
+        <div class="filters-grid">
+            <div class="filter-group">
+                <label>Recherche</label>
+                <input type="text" [(ngModel)]="searchTerm" (input)="applyFilters()"
+                       placeholder="Nom, prénom, email..." class="form-control">
+            </div>
+            <div class="filter-group">
+                <label>Poste</label>
+                <select [(ngModel)]="filterPoste" (change)="applyFilters()" class="form-control">
+                    <option value="">Tous les postes</option>
+                    <option *ngFor="let p of postes" [value]="p">{{ p }}</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Unité / Service</label>
+                <select [(ngModel)]="filterUnite" (change)="applyFilters()" class="form-control">
+                    <option value="">Toutes les unités</option>
+                    <option *ngFor="let u of unites" [value]="u">{{ u }}</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Statut</label>
+                <select [(ngModel)]="filterStatut" (change)="applyFilters()" class="form-control">
+                    <option value="">Tous les statuts</option>
+                    <option value="ACTIF">Actif</option>
+                    <option value="INACTIF">Inactif</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chargement -->
+    <div *ngIf="isLoading" class="loading-container">
+        <div class="spinner"></div>
+        <p>Chargement des agents...</p>
+    </div>
+
+    <!-- Tableau -->
+    <div *ngIf="!isLoading" class="table-card">
+        <div class="table-header">
+            <div class="table-header-left">
+                <span class="table-title"><i class="pi pi-users"></i> Liste du personnel</span>
+                <span class="table-count">{{ totalItems }} agent(s)</span>
+            </div>
+            <div class="table-header-right">
+                <button class="btn-export btn-excel" (click)="exportToExcel()" title="Exporter en Excel">
+                    <i class="pi pi-file-excel"></i> Excel
+                </button>
+                <button class="btn-export btn-pdf" (click)="exportToPdf()" title="Exporter en PDF">
+                    <i class="pi pi-file-pdf"></i> PDF
+                </button>
+                <label class="page-size-label">Afficher :</label>
+                <select [(ngModel)]="itemsPerPage" (change)="onItemsPerPageChange()" class="page-size">
+                    <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }}</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th class="col-num">N°</th>
+                    <th>Nom complet</th>
+                    <th>Email</th>
+                    <th>Téléphone</th>
+                    <th>Poste</th>
+                    <th>Unité / Service</th>
+                    <th class="col-statut">Statut</th>
+                    <th class="col-actions">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr *ngFor="let agent of paginatedAgents; let i = index">
+                    <td class="col-num">{{ getStartIndex() + i }}</td>
+                    <td>
+                        <div class="agent-name-cell">
+                            <span class="agent-avatar">{{ agent.prenom.charAt(0) }}{{ agent.nom.charAt(0) }}</span>
+                            <strong>{{ agent.prenom }} {{ agent.nom }}</strong>
+                        </div>
+                    </td>
+                    <td class="col-email">{{ agent.email || '-' }}</td>
+                    <td>{{ agent.telephone || '-' }}</td>
+                    <td>{{ agent.poste || '-' }}</td>
+                    <td>{{ agent.unite || '-' }}</td>
+                    <td class="col-statut">
+                        <span class="badge" [ngClass]="agent.actif ? 'badge-actif' : 'badge-inactif'">
+                            {{ agent.actif ? 'Actif' : 'Inactif' }}
+                        </span>
+                    </td>
+                    <td class="col-actions">
+                        <app-action-buttons
+                                [actions]="getActionsFor(agent)"
+                                (actionClick)="onAction($event, agent)">
+                        </app-action-buttons>
+                    </td>
+                </tr>
+                <tr *ngIf="paginatedAgents.length === 0">
+                    <td colspan="8" class="empty-row">
+                        <div class="empty-state">
+                            <i class="pi pi-inbox empty-icon"></i>
+                            <p>Aucun agent trouvé</p>
+                            <button *ngIf="hasActiveFilters()" class="btn-secondary" (click)="resetFilters()">
+                                Réinitialiser les filtres
+                            </button>
+                            <button *ngIf="!hasActiveFilters()" class="btn-primary" (click)="openCreateForm()">
+                                + Créer un agent
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination-container" *ngIf="totalItems > 0">
+            <div class="pagination-info">
+                {{ getStartIndex() }} - {{ getEndIndex() }} sur {{ totalItems }}
+            </div>
+            <div class="pagination">
+                <button class="pagination-btn"
+                        [disabled]="currentPage === 1"
+                        (click)="onPageChange(currentPage - 1)">
+                    ◀ Précédent
+                </button>
+                <div class="pagination-numbers">
+                    <button *ngFor="let page of pages"
+                            class="pagination-number"
+                            [class.active]="page === currentPage"
+                            (click)="onPageChange(page)">
+                        {{ page }}
+                    </button>
+                </div>
+                <button class="pagination-btn"
+                        [disabled]="currentPage === totalPages"
+                        (click)="onPageChange(currentPage + 1)">
+                    Suivant ▶
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Formulaire -->
+    <div class="modal-overlay" *ngIf="showForm" (click)="closeForm()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+                <div>
+                    <h2>{{ editingAgent ? 'Modifier l\'agent' : 'Nouvel agent' }}</h2>
+                    <p class="modal-subtitle">
+                        {{ editingAgent ? 'Modifiez les informations' : 'Ajoutez un nouveau membre du personnel' }}
+                    </p>
+                </div>
+                <button class="close-btn" (click)="closeForm()">
+                    <i class="pi pi-times"></i>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Nom <span class="required">*</span></label>
+                        <input type="text" [(ngModel)]="formData.nom"
+                               class="form-control" placeholder="Ex: LAWSON">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Prénom <span class="required">*</span></label>
+                        <input type="text" [(ngModel)]="formData.prenom"
+                               class="form-control" placeholder="Ex: Kossi">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" [(ngModel)]="formData.email"
+                               class="form-control" placeholder="Ex: lawson@pnlp.tg">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Téléphone</label>
+                        <input type="tel" [(ngModel)]="formData.telephone"
+                               class="form-control" placeholder="Ex: +22890000001">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Poste</label>
+                        <input type="text" [(ngModel)]="formData.poste"
+                               class="form-control" placeholder="Ex: Superviseur">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Unité / Service</label>
+                        <input type="text" [(ngModel)]="formData.unite"
+                               class="form-control" placeholder="Ex: Unité Surveillance">
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="icon-btn-close"
+                        (click)="closeForm()"
+                        title="Annuler">
+                    <i class="pi pi-times"></i>
+                </button>
+                <button type="button" class="icon-btn-save"
+                        [disabled]="isLoading || !formData.nom || !formData.prenom"
+                        (click)="saveAgent()"
+                        [title]="editingAgent ? 'Modifier' : 'Créer'">
+                    <i class="pi" [ngClass]="isLoading ? 'pi-spin pi-spinner' : 'pi-check'"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Détails -->
+    <div class="modal-overlay" *ngIf="showDetailModal" (click)="closeDetailModal()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+            <div class="modal-header modal-header-detail">
+                <div>
+                    <h2><i class="pi pi-info-circle"></i> Détails de l'agent</h2>
+                    <p class="modal-subtitle">Informations complètes</p>
+                </div>
+                <button class="close-btn" (click)="closeDetailModal()">
+                    <i class="pi pi-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" *ngIf="selectedAgent">
+                <div class="detail-row">
+                    <span class="detail-label">Nom complet :</span>
+                    <span class="detail-value">{{ selectedAgent.prenom }} {{ selectedAgent.nom }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Email :</span>
+                    <span class="detail-value">{{ selectedAgent.email || '-' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Téléphone :</span>
+                    <span class="detail-value">{{ selectedAgent.telephone || '-' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Poste :</span>
+                    <span class="detail-value">{{ selectedAgent.poste || '-' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Unité / Service :</span>
+                    <span class="detail-value">{{ selectedAgent.unite || '-' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Statut :</span>
+                    <span class="detail-value">
+                        <span class="badge" [ngClass]="selectedAgent.actif ? 'badge-actif' : 'badge-inactif'">
+                            {{ selectedAgent.actif ? 'Actif' : 'Inactif' }}
+                        </span>
+                    </span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="icon-btn-close"
+                        (click)="closeDetailModal()"
+                        title="Fermer">
+                    <i class="pi pi-times"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

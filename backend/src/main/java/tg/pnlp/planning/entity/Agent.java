@@ -7,14 +7,15 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.time.LocalDate;
 
-
 @Entity
 @Table(name = "agents")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -39,6 +40,10 @@ public class Agent {
     @Column(length = 100)
     private String poste;
 
+    // ✅ NOUVEAU : Unité ou service de l'agent
+    @Column(length = 255)
+    private String unite;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "direction_id")
     private Direction direction;
@@ -49,7 +54,7 @@ public class Agent {
 
     @Column(nullable = false)
     @Builder.Default
-    private Boolean actif = true;
+    private Boolean actif = false;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -75,5 +80,17 @@ public class Agent {
     public boolean isDisponible(LocalDate debut, LocalDate fin) {
         return indisponibilites.stream()
                 .noneMatch(i -> i.chevauche(debut, fin));
+    }
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Agent agent = (Agent) o;
+        return id != null && Objects.equals(id, agent.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
     }
 }

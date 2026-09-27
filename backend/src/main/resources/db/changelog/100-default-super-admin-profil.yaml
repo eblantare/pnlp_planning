@@ -1,0 +1,24 @@
+databaseChangeLog:
+  - changeSet:
+      id: 100-default-super-admin-profil
+      author: pnlp
+      comment: "Création du profil SUPER_ADMIN s'il n'existe pas"
+      changes:
+        - sql:
+            sql: |
+              INSERT INTO profils (id, code, libelle, description, niveau, actif, created_at, updated_at)
+              SELECT
+                gen_random_uuid(),
+                'SUPER_ADMIN',
+                'Super Administrateur',
+                'Accès complet au système',
+                100,
+                true,
+                NOW(),
+                NOW()
+              WHERE NOT EXISTS (
+                SELECT 1 FROM profils WHERE code = 'SUPER_ADMIN'
+              );
+      rollback:
+        - sql:
+            sql: "DELETE FROM profils WHERE code = 'SUPER_ADMIN';"

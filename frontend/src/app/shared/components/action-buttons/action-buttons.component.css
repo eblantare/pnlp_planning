@@ -1,0 +1,56 @@
+.action-buttons-container {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+    align-items: center;
+}
+
+.action-btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.15s ease;
+    padding: 0;
+    background: #f5f5f5;
+}
+
+.action-btn:hover {
+    transform: translateY(-1px) scale(1.05);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.action-btn:active {
+    transform: translateY(0) scale(0.98);
+}
+
+.action-btn__icon {
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Variantes de couleur */
+.action-btn--primary { background: #E3F2FD; color: #1565C0; }
+.action-btn--primary:hover { background: #BBDEFB; }
+
+.action-btn--warning { background: #FFF3E0; color: #E65100; }
+.action-btn--warning:hover { background: #FFE0B2; }
+
+.action-btn--danger { background: #FFEBEE; color: #C62828; }
+.action-btn--danger:hover { background: #FFCDD2; }
+
+.action-btn--success { background: #E8F5E9; color: #2E7D32; }
+.action-btn--success:hover { background: #C8E6C9; }
+
+.action-btn--info { background: #E1F5FE; color: #0277BD; }
+.action-btn--info:hover { background: #B3E5FC; }
+
+.action-btn--neutral { background: #F5F5F5; color: #555; }
+.action-btn--neutral:hover { background: #E0E0E0; }

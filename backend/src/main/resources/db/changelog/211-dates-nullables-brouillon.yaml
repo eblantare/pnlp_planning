@@ -1,0 +1,19 @@
+databaseChangeLog:
+  - changeSet:
+      id: 211-dates-nullables-brouillon
+      author: pnlp
+      comment: "Rendre les dates nullables pour permettre les brouillons incomplets"
+      changes:
+        - sql:
+            sql: |
+              -- Rendre les dates nullables
+              ALTER TABLE activites ALTER COLUMN date_debut DROP NOT NULL;
+              ALTER TABLE activites ALTER COLUMN date_fin DROP NOT NULL;
+              ALTER TABLE activites ALTER COLUMN nombre_jours DROP NOT NULL;
+              ALTER TABLE activites ALTER COLUMN lieu DROP NOT NULL;
+      rollback:
+        - sql:
+            sql: |
+              -- Remettre NOT NULL (attention : échouera si des brouillons existent)
+              ALTER TABLE activites ALTER COLUMN date_debut SET NOT NULL;
+              ALTER TABLE activites ALTER COLUMN date_fin SET NOT NULL;

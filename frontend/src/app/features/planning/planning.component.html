@@ -5,8 +5,8 @@
             <h1>Gestion du Planning des Activités</h1>
             <p class="subtitle">Suivi et planification des missions du personnel</p>
         </div>
-        <button class="btn-primary" (click)="openCreateForm()">
-            <span class="btn-icon">+</span> Nouvelle Activité
+        <button class="btn-fab" (click)="openCreateForm()" title="Nouvelle activité">
+            <span class="fab-icon">+</span>
         </button>
     </div>
 
@@ -18,27 +18,27 @@
         <span class="alert-icon">✕</span> {{ errorMessage }}
     </div>
 
-    <!-- Statistiques rapides -->
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-icon green">📋</div>
-            <div class="stat-info">
-                <span class="stat-label">Activités totales</span>
-                <span class="stat-value">{{ activites.length }}</span>
+    <!-- Statistiques -->
+    <div class="stats-row">
+        <div class="stat-mini">
+            <span class="stat-mini-icon green">📋</span>
+            <div class="stat-mini-info">
+                <span class="stat-mini-value">{{ activites.length }}</span>
+                <span class="stat-mini-label">Activités</span>
             </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-icon blue">👥</div>
-            <div class="stat-info">
-                <span class="stat-label">Agents</span>
-                <span class="stat-value">{{ agents.length }}</span>
+        <div class="stat-mini">
+            <span class="stat-mini-icon blue">👥</span>
+            <div class="stat-mini-info">
+                <span class="stat-mini-value">{{ agents.length }}</span>
+                <span class="stat-mini-label">Participants</span>
             </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-icon orange">🔥</div>
-            <div class="stat-info">
-                <span class="stat-label">Agents occupés</span>
-                <span class="stat-value">{{ getAgentsOccupes() }}</span>
+        <div class="stat-mini">
+            <span class="stat-mini-icon orange">🔥</span>
+            <div class="stat-mini-info">
+                <span class="stat-mini-value">{{ getAgentsOccupes() }}</span>
+                <span class="stat-mini-label">Participants occupés</span>
             </div>
         </div>
     </div>
@@ -46,38 +46,40 @@
     <!-- Filtres -->
     <div class="filters-card">
         <div class="filters-header">
-            <h3>🔍 Filtres et Navigation</h3>
+            <h3>🔍 Filtres</h3>
+            <button *ngIf="hasActiveFilters()" class="btn-reset" (click)="resetFilters()">
+                ↺ Réinitialiser
+            </button>
         </div>
-        <div class="filters-body">
-            <div class="filter-row">
-                <div class="filter-group">
-                    <label>Recherche</label>
-                    <input type="text" [(ngModel)]="searchTerm" (input)="applyFilters()"
-                           placeholder="Rechercher une activité..." class="form-control">
+        <div class="filters-grid">
+            <div class="filter-group">
+                <label>Recherche</label>
+                <input type="text" [(ngModel)]="searchTerm" (input)="applyFilters()"
+                       placeholder="Titre, lieu..." class="form-control">
+            </div>
+            <div class="filter-group">
+                <label>Statut</label>
+                <select [(ngModel)]="filterStatut" (change)="applyFilters()" class="form-control">
+                    <option value="">Tous les statuts</option>
+                    <option value="BROUILLON">Brouillon</option>
+                    <option value="PLANIFIEE">Planifiée</option>
+                    <option value="EN_COURS">En cours</option>
+                    <option value="TERMINEE">Terminée</option>
+                    <option value="ANNULEE">Annulée</option>
+                    <option value="REPORTEE">Reportée</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Période</label>
+                <div class="month-navigation">
+                    <button (click)="changerMois(-1)" class="btn-month">◀</button>
+                    <span class="current-month">{{ getMoisNom(mois) }} {{ annee }}</span>
+                    <button (click)="changerMois(1)" class="btn-month">▶</button>
                 </div>
-                <div class="filter-group">
-                    <label>Statut</label>
-                    <select [(ngModel)]="filterStatut" (change)="applyFilters()" class="form-control">
-                        <option value="">Tous les statuts</option>
-                        <option value="PLANIFIEE">Planifiée</option>
-                        <option value="EN_COURS">En cours</option>
-                        <option value="TERMINEE">Terminée</option>
-                        <option value="ANNULEE">Annulée</option>
-                        <option value="REPORTEE">Reportée</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label>Période</label>
-                    <div class="month-navigation">
-                        <button (click)="changerMois(-1)" class="btn-month">◀</button>
-                        <span class="current-month">{{ getMoisNom(mois) }} {{ annee }}</span>
-                        <button (click)="changerMois(1)" class="btn-month">▶</button>
-                    </div>
-                </div>
-                <div class="filter-group">
-                    <label>Actions</label>
-                    <button class="btn-refresh" (click)="loadPlanning()">🔄 Rafraîchir</button>
-                </div>
+            </div>
+            <div class="filter-group">
+                <label>Actions</label>
+                <button class="btn-refresh" (click)="loadPlanning()">🔄 Rafraîchir</button>
             </div>
         </div>
     </div>
@@ -88,11 +90,25 @@
         <p>Chargement des activités...</p>
     </div>
 
-    <!-- Tableau des activités -->
+    <!-- Tableau -->
     <div *ngIf="!isLoading" class="table-card">
         <div class="table-header">
-            <span class="table-title">📋 Liste des activités</span>
-            <span class="table-count">{{ filteredActivites.length }} activité(s)</span>
+            <div class="table-header-left">
+                <span class="table-title">📋 Liste des activités</span>
+                <span class="table-count">{{ totalItems }} activité(s)</span>
+            </div>
+            <div class="table-header-right">
+                <button class="btn-export btn-excel" (click)="exportToExcel()" title="Exporter en Excel">
+                    📊 Excel
+                </button>
+                <button class="btn-export btn-pdf" (click)="exportToPdf()" title="Exporter en PDF">
+                    📄 PDF
+                </button>
+                <label class="page-size-label">Afficher :</label>
+                <select [(ngModel)]="itemsPerPage" (change)="onItemsPerPageChange()" class="page-size">
+                    <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }}</option>
+                </select>
+            </div>
         </div>
 
         <div class="table-responsive">
@@ -104,40 +120,46 @@
                     <th class="col-dates">Période</th>
                     <th class="col-jours">Jours</th>
                     <th class="col-lieu">Lieu</th>
-                    <th class="col-agents">Agents</th>
+                    <th class="col-financement">Financement</th>
+                    <th class="col-agents">Participants</th>
                     <th class="col-statut">Statut</th>
                     <th class="col-actions">Actions</th>
                 </tr>
                 </thead>
                 <tbody>
-                <tr *ngFor="let activite of filteredActivites; let i = index" class="activite-row">
-                    <td class="col-num">{{ i + 1 }}</td>
+                <tr *ngFor="let activite of paginatedActivites; let i = index" class="activite-row">
+                    <td class="col-num">{{ getStartIndex() + i }}</td>
                     <td class="col-titre">
                         <div class="titre-cell">
                             <strong [title]="activite.titre">
-                                {{ activite.titre | slice:0:40 }}{{ (activite.titre.length || 0) > 40 ? '...' : '' }}
+                                {{ activite.titre | slice:0:35 }}{{ (activite.titre.length || 0) > 35 ? '...' : '' }}
                             </strong>
                             <span class="description-text"
-                                  *ngIf="activite.description"
-                                  [title]="activite.description">
-                                {{ activite.description | slice:0:50 }}{{ activite.description.length > 50 ? '...' : '' }}
+                                  *ngIf="activite.commentaires"
+                                  [title]="activite.commentaires">
+                                {{ activite.commentaires | slice:0:40 }}{{ activite.commentaires.length > 40 ? '...' : '' }}
                             </span>
                         </div>
                     </td>
                     <td class="col-dates">
                         <div class="date-range">
-                            <span class="date-start">{{ activite.dateDebut | date:'dd/MM/yyyy' }}</span>
+                            <span>{{ activite.dateDebut | date:'dd/MM/yyyy' }}</span>
                             <span class="date-arrow">→</span>
-                            <span class="date-end">{{ activite.dateFin | date:'dd/MM/yyyy' }}</span>
+                            <span>{{ activite.dateFin | date:'dd/MM/yyyy' }}</span>
                         </div>
                     </td>
                     <td class="col-jours">
                         <span class="badge-jours">{{ activite.nombreJours }}j</span>
                     </td>
-                    {{ (activite.lieu || '-') | slice:0:20 }}{{ ((activite.lieu?.length) || 0) > 20 ? '...' : '' }}
+                    <td class="col-lieu" [title]="activite.lieu || '-'">
+                        {{ (activite.lieu || '-') | slice:0:15 }}{{ (activite.lieu?.length || 0) > 15 ? '...' : '' }}
+                    </td>
+                    <td class="col-financement" [title]="activite.sourceFinancement || '-'">
+                        {{ (activite.sourceFinancement || '-') | slice:0:15 }}{{ (activite.sourceFinancement?.length || 0) > 15 ? '...' : '' }}
+                    </td>
                     <td class="col-agents">
                         <span class="badge-agents"
-                              [title]="activite.agentNoms?.join(', ') || 'Aucun agent'"
+                              [title]="activite.agentNoms?.join(', ') || 'Aucun participant'"
                               *ngIf="activite.agentNoms?.length; else noAgents">
                             👥 {{ activite.agentNoms?.length }}
                         </span>
@@ -150,6 +172,7 @@
                                 [ngModel]="activite.statut"
                                 (ngModelChange)="changerStatutDirect(activite, $event)"
                                 [ngClass]="getStatutClass(activite.statut)">
+                            <option value="BROUILLON">Brouillon</option>
                             <option value="PLANIFIEE">Planifiée</option>
                             <option value="EN_COURS">En cours</option>
                             <option value="TERMINEE">Terminée</option>
@@ -158,49 +181,68 @@
                         </select>
                     </td>
                     <td class="col-actions">
-                        <div class="action-buttons">
-                            <button class="btn-action btn-view" (click)="viewActivite(activite)" title="Détails">
-                                👁️
-                            </button>
-
-                            <button *ngIf="activite.statut === 'PLANIFIEE'"
-                                    class="btn-action btn-edit"
-                                    (click)="editActivite(activite)"
-                                    title="Modifier">
-                                ✏️
-                            </button>
-
-                            <button *ngIf="activite.statut === 'PLANIFIEE'"
-                                    class="btn-action btn-delete"
-                                    (click)="deleteActivite(activite)"
-                                    title="Supprimer">
-                                🗑️
-                            </button>
-                        </div>
+                        <app-action-buttons
+                                [actions]="getActionsForActivite(activite)"
+                                (actionClick)="onActionActivite($event, activite)">
+                        </app-action-buttons>
                     </td>
                 </tr>
-                <tr *ngIf="filteredActivites.length === 0">
-                    <td colspan="8" class="empty-row">
+                <tr *ngIf="paginatedActivites.length === 0">
+                    <td colspan="9" class="empty-row">
                         <div class="empty-state">
                             <span class="empty-icon">📭</span>
                             <p>Aucune activité trouvée</p>
-                            <button class="btn-primary" (click)="openCreateForm()">+ Créer une activité</button>
+                            <button *ngIf="hasActiveFilters()" class="btn-secondary" (click)="resetFilters()">
+                                Réinitialiser les filtres
+                            </button>
+                            <button *ngIf="!hasActiveFilters()" class="btn-primary" (click)="openCreateForm()">
+                                + Créer une activité
+                            </button>
                         </div>
                     </td>
                 </tr>
                 </tbody>
             </table>
         </div>
+
+        <!-- Pagination -->
+        <div class="pagination-container" *ngIf="totalItems > 0">
+            <div class="pagination-info">
+                {{ getStartIndex() }} - {{ getEndIndex() }} sur {{ totalItems }}
+            </div>
+            <div class="pagination">
+                <button class="pagination-btn"
+                        [disabled]="currentPage === 1"
+                        (click)="onPageChange(currentPage - 1)">
+                    ◀ Précédent
+                </button>
+                <div class="pagination-numbers">
+                    <button *ngFor="let page of pages"
+                            class="pagination-number"
+                            [class.active]="page === currentPage"
+                            (click)="onPageChange(page)">
+                        {{ page }}
+                    </button>
+                </div>
+                <button class="pagination-btn"
+                        [disabled]="currentPage === totalPages"
+                        (click)="onPageChange(currentPage + 1)">
+                    Suivant ▶
+                </button>
+            </div>
+        </div>
     </div>
 
-    <!-- Modal Formulaire -->
+    <!-- ============================================================ -->
+    <!-- MODAL FORMULAIRE                                             -->
+    <!-- ============================================================ -->
     <div class="modal-overlay" *ngIf="showForm" (click)="closeForm()">
         <div class="modal-content modal-large" (click)="$event.stopPropagation()">
             <div class="modal-header">
                 <div>
                     <h2>{{ editingActivite ? 'Modifier l\'activité' : 'Nouvelle activité' }}</h2>
                     <p class="modal-subtitle">
-                        {{ editingActivite ? 'Modifiez les informations de l\'activité' : 'Remplissez les informations de la nouvelle activité' }}
+                        {{ editingActivite ? 'Modifiez les informations' : 'Remplissez les informations' }}
                     </p>
                 </div>
                 <button class="close-btn" (click)="closeForm()">×</button>
@@ -208,6 +250,7 @@
 
             <div class="modal-body">
                 <form (ngSubmit)="creerActivite()" #activiteForm="ngForm">
+                    <!-- Informations générales -->
                     <div class="form-section">
                         <h3 class="form-section-title">
                             <span class="section-icon">📝</span> Informations générales
@@ -220,37 +263,65 @@
                             <input type="text" [(ngModel)]="nouvelleActivite.titre"
                                    name="titre" required class="form-control"
                                    placeholder="Ex: Supervision de la CPS cycle 4">
-                            <span class="form-hint">Soyez précis et descriptif</span>
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label">Description</label>
-                            <textarea [(ngModel)]="nouvelleActivite.description"
-                                      name="description" class="form-control" rows="3"
-                                      placeholder="Détails supplémentaires sur l'activité..."></textarea>
+                            <label class="form-label">Commentaires</label>
+                            <textarea [(ngModel)]="nouvelleActivite.commentaires"
+                                      name="commentaires" class="form-control" rows="3"
+                                      placeholder="Détails supplémentaires..."></textarea>
                         </div>
                     </div>
 
+                    <!-- Statut -->
+                    <div class="form-section">
+                        <h3 class="form-section-title">
+                            <span class="section-icon">🏷️</span> Statut de l'activité
+                        </h3>
+
+                        <div class="form-group">
+                            <label class="form-label">Statut</label>
+                            <select [(ngModel)]="nouvelleActivite.statut"
+                                    name="statut" class="form-control"
+                                    (ngModelChange)="onStatutChange($event)">
+                                <option value="BROUILLON">Brouillon (sans dates obligatoires - à compléter plus tard)</option>
+                                <option value="PLANIFIEE">Planifiée (tous les champs obligatoires)</option>
+                            </select>
+                            <span class="form-hint">
+                            <strong>Brouillon</strong> : seuls le titre est requis. Dates, lieu et participants sont optionnels.
+                            <br>
+                            <strong>Planifiée</strong> : dates, lieu et au moins un participant sont obligatoires.
+                        </span>
+                        </div>
+                    </div>
+
+                    <!-- Dates et durée -->
                     <div class="form-section">
                         <h3 class="form-section-title">
                             <span class="section-icon">📅</span> Dates et durée
+                            <span class="optional-badge" *ngIf="isBrouillon()">Optionnel</span>
+                            <span class="required-badge" *ngIf="!isBrouillon()">Requis</span>
                         </h3>
 
                         <div class="form-row">
                             <div class="form-group">
                                 <label class="form-label">
-                                    Date de début <span class="required">*</span>
+                                    Date de début
+                                    <span class="required" *ngIf="!isBrouillon()">*</span>
                                 </label>
                                 <input type="date" [(ngModel)]="nouvelleActivite.dateDebut"
-                                       name="dateDebut" required class="form-control"
+                                       name="dateDebut" class="form-control"
+                                       [required]="!isBrouillon()"
                                        (change)="calculerNombreJours()">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">
-                                    Date de fin <span class="required">*</span>
+                                    Date de fin
+                                    <span class="required" *ngIf="!isBrouillon()">*</span>
                                 </label>
                                 <input type="date" [(ngModel)]="nouvelleActivite.dateFin"
-                                       name="dateFin" required class="form-control"
+                                       name="dateFin" class="form-control"
+                                       [required]="!isBrouillon()"
                                        (change)="calculerNombreJours()">
                             </div>
                         </div>
@@ -261,17 +332,24 @@
                         </div>
                     </div>
 
+                    <!-- Lieu et financement -->
                     <div class="form-section">
                         <h3 class="form-section-title">
                             <span class="section-icon">📍</span> Lieu et financement
+                            <span class="optional-badge" *ngIf="isBrouillon()">Optionnel</span>
+                            <span class="required-badge" *ngIf="!isBrouillon()">Lieu requis</span>
                         </h3>
 
                         <div class="form-row">
                             <div class="form-group">
-                                <label class="form-label">Lieu</label>
+                                <label class="form-label">
+                                    Lieu
+                                    <span class="required" *ngIf="!isBrouillon()">*</span>
+                                </label>
                                 <input type="text" [(ngModel)]="nouvelleActivite.lieu"
                                        name="lieu" class="form-control"
-                                       placeholder="Ex: Plateaux, Centrale, Kara">
+                                       [required]="!isBrouillon()"
+                                       placeholder="Ex: Plateaux, Centrale">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Source de financement</label>
@@ -282,37 +360,150 @@
                         </div>
                     </div>
 
-                    <div class="form-section">
+                    <!-- Zones et participants - MASQUÉ si BROUILLON -->
+                    <div class="form-section" *ngIf="!isBrouillon()">
                         <h3 class="form-section-title">
-                            <span class="section-icon">👥</span> Agents à affecter
-                            <span class="selected-count" *ngIf="nouvelleActivite.agentIds?.length">
-                                ({{ nouvelleActivite.agentIds?.length }} sélectionné(s))
-                            </span>
+                            <span class="section-icon">🗺️</span> Zones et participants
+                            <span class="required-badge">Requis</span>
+                            <span class="selected-count">
+                            ({{ getTotalSelectedAgents() }} participant(s) au total)
+                        </span>
                         </h3>
 
-                        <div class="form-group">
-                            <input type="text" [(ngModel)]="searchAgent"
-                                   (input)="filterAgentsList()"
-                                   name="searchAgent" class="form-control"
-                                   placeholder="🔍 Rechercher un agent...">
+                        <!-- Un bloc par groupe de zone -->
+                        <div *ngFor="let group of zoneGroups; let gi = index" class="zone-group">
+
+                            <!-- En-tête du groupe -->
+                            <div class="zone-group-header">
+                            <span class="zone-group-title">
+                                📍 Zone {{ gi + 1 }}
+                                <span *ngIf="group.agentIds.length > 0" class="zone-group-count">
+                                    ({{ group.agentIds.length }} participant(s))
+                                </span>
+                            </span>
+                                <button type="button"
+                                        class="btn-remove-group"
+                                        *ngIf="zoneGroups.length > 1"
+                                        (click)="supprimerGroupe(gi)"
+                                        title="Supprimer cette zone">
+                                    🗑️
+                                </button>
+                            </div>
+
+                            <!-- Région -->
+                            <div class="form-group">
+                                <label class="form-label">Région</label>
+                                <select class="form-control"
+                                        [ngModel]="group.region"
+                                        (ngModelChange)="onRegionChange(gi, $event)"
+                                        [ngModelOptions]="{standalone: true}">
+                                    <option value="">-- Sélectionner une région --</option>
+                                    <option *ngFor="let r of getRegionsList()" [value]="r">{{ r }}</option>
+                                </select>
+                            </div>
+
+                            <!-- Districts -->
+                            <div class="form-group" *ngIf="group.region">
+                                <label class="form-label">
+                                    Districts (plusieurs choix possibles)
+                                    <span class="selected-count" *ngIf="group.districts.size > 0">
+                                    ({{ group.districts.size }} sélectionné(s))
+                                </span>
+                                </label>
+                                <div class="districts-grid">
+                                    <div *ngFor="let d of getAvailableDistricts(gi)"
+                                         class="district-checkbox"
+                                         [class.selected]="isDistrictSelected(gi, d)">
+                                        <label>
+                                            <input type="checkbox"
+                                                   [checked]="isDistrictSelected(gi, d)"
+                                                   (change)="toggleDistrict(gi, d)">
+                                            <span class="district-name">{{ d }}</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Récapitulatif de la zone -->
+                            <div class="form-info" *ngIf="getGroupZone(gi)">
+                                <span class="info-icon">📍</span>
+                                Zone : <strong>{{ getGroupZone(gi) }}</strong>
+                            </div>
+
+                            <!-- Participants du groupe -->
+                            <div class="form-group">
+                                <label class="form-label">
+                                    Participants pour cette zone
+                                    <span class="required">*</span>
+                                </label>
+                                <input type="text"
+                                       [(ngModel)]="searchAgentByGroup[gi]"
+                                       [ngModelOptions]="{standalone: true}"
+                                       class="form-control"
+                                       placeholder="🔍 Rechercher un participant...">
+                            </div>
+
+                            <div class="agents-grid">
+                                <div *ngFor="let agent of getFilteredAgentsForGroup(gi)"
+                                     class="agent-checkbox"
+                                     [class.selected]="isAgentInGroup(gi, agent.id!)"
+                                     [class.disabled]="isAgentInAnyGroup(agent.id!) && !isAgentInGroup(gi, agent.id!)">
+                                    <label>
+                                        <input type="checkbox"
+                                               [checked]="isAgentInGroup(gi, agent.id!)"
+                                               [disabled]="isAgentInAnyGroup(agent.id!) && !isAgentInGroup(gi, agent.id!)"
+                                               (change)="toggleAgentInGroup(gi, agent.id!)">
+                                        <div class="agent-info">
+                                            <span class="agent-name">{{ agent.prenom }} {{ agent.nom }}</span>
+                                            <span class="agent-poste">{{ agent.poste || 'Participant' }}</span>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div *ngIf="getFilteredAgentsForGroup(gi).length === 0" class="no-agents">
+                                    Aucun participant trouvé
+                                </div>
+                            </div>
+
+                            <!-- Slots à remplacer -->
+                            <div *ngIf="slotsARemplacer[gi]?.length" class="slots-container">
+                                <label class="form-label">🔄 Participants à remplacer :</label>
+                                <div *ngFor="let slot of slotsARemplacer[gi]; let si = index"
+                                     class="slot-item">
+                                    <span class="slot-label">Slot vide ({{ group.region }})</span>
+                                    <button type="button"
+                                            class="btn-warning-outline btn-sm"
+                                            (click)="ouvrirRemplacementPourSlot(gi, si)">
+                                        🔄 Remplacer
+                                    </button>
+                                    <button type="button"
+                                            class="btn-danger-outline btn-sm"
+                                            (click)="supprimerSlot(gi, si)">
+                                        ✕ Annuler
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="agents-grid">
-                            <div *ngFor="let agent of filteredAgents"
-                                 class="agent-checkbox"
-                                 [class.selected]="isAgentSelected(agent.id!)">
-                                <label>
-                                    <input type="checkbox"
-                                           [checked]="isAgentSelected(agent.id!)"
-                                           (change)="toggleAgent(agent.id!)">
-                                    <div class="agent-info">
-                                        <span class="agent-name">{{ agent.prenom }} {{ agent.nom }}</span>
-                                        <span class="agent-poste">{{ agent.poste || 'Agent' }}</span>
-                                    </div>
-                                </label>
-                            </div>
-                            <div *ngIf="filteredAgents.length === 0" class="no-agents">
-                                Aucun agent trouvé
+                        <!-- Bouton ajouter une autre zone -->
+                        <button type="button"
+                                class="btn-add-group"
+                                (click)="ajouterGroupe()">
+                            <span class="btn-add-icon">+</span>
+                            Ajouter une autre zone
+                        </button>
+                    </div>
+
+                    <!-- Message informatif pour BROUILLON -->
+                    <div class="form-section" *ngIf="isBrouillon()">
+                        <div class="alert alert-warning" style="margin-bottom: 0;">
+                            <span class="alert-icon">ℹ️</span>
+                            <div>
+                                <strong>Mode Brouillon</strong>
+                                <p style="margin: 6px 0 0 0;">
+                                    Cette activité sera enregistrée <strong>sans dates, lieu ni participants</strong>.
+                                    Lorsque vous passerez le statut à <strong>Planifiée</strong>,
+                                    ces champs deviendront obligatoires et vous pourrez associer les agents.
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -320,19 +511,174 @@
             </div>
 
             <div class="modal-footer">
-                <button type="button" class="btn-secondary" (click)="closeForm()">
-                    Annuler
+                <button type="button" class="icon-btn-close"
+                        (click)="closeForm()"
+                        title="Annuler">
+                    <i class="pi pi-times"></i>
                 </button>
-                <button type="button" class="btn-primary"
+                <button type="button" class="icon-btn-save"
                         [disabled]="isLoading || !nouvelleActivite.titre"
-                        (click)="creerActivite()">
-                    {{ isLoading ? 'Enregistrement...' : (editingActivite ? 'Modifier' : 'Créer') }}
+                        (click)="creerActivite()"
+                        [title]="editingActivite ? 'Modifier' : 'Créer'">
+                    <i class="pi" [ngClass]="isLoading ? 'pi-spin pi-spinner' : 'pi-check'"></i>
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Modal Détails -->
+    <!-- ============================================================ -->
+    <!-- MODAL CONFLITS                                               -->
+    <!-- ============================================================ -->
+    <div class="modal-overlay" *ngIf="showConflitModal" (click)="closeConflitModal()">
+        <div class="modal-content modal-large" (click)="$event.stopPropagation()">
+            <div class="modal-header modal-header-warning">
+                <div>
+                    <h2>⚠️ Conflits détectés</h2>
+                    <p class="modal-subtitle">
+                        Certains participants sont déjà affectés à d'autres activités sur la même période
+                    </p>
+                </div>
+                <button class="close-btn" (click)="closeConflitModal()">×</button>
+            </div>
+
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <span class="alert-icon">⚠️</span>
+                    <div>
+                        <strong>{{ conflitsDetectes.length }} conflit(s) détecté(s)</strong>
+                        <p>Pour chaque participant en conflit, vous pouvez :</p>
+                        <ul>
+                            <li><strong>Retirer</strong> le participant de l'activité</li>
+                            <li><strong>Forcer</strong> l'affectation malgré le conflit</li>
+                        </ul>
+                        <p class="text-muted" style="margin-top: 8px;">
+                            💡 Après avoir retiré un participant, un bouton <strong>Remplacer</strong> apparaîtra dans le formulaire.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="conflits-list">
+                    <div *ngFor="let conflit of conflitsDetectes" class="conflit-item">
+                        <div class="conflit-agent-info">
+                            <div class="agent-avatar">
+                                {{ (conflit.agentPrenom || '?')[0] }}{{ (conflit.agentNom || '?')[0] }}
+                            </div>
+                            <div>
+                                <strong>{{ conflit.agentPrenom }} {{ conflit.agentNom }}</strong>
+                                <span class="agent-poste">{{ conflit.agentPoste || 'Participant' }}</span>
+                            </div>
+                        </div>
+
+                        <div class="conflit-details">
+                            <div *ngIf="conflit.typeConflit === 'AFFECTATION_SIMULTANEE'" class="conflit-type">
+                                <span class="badge badge-warning">Affectation simultanée</span>
+                                <p>Déjà affecté à : <strong>{{ conflit.activiteConflit }}</strong></p>
+                                <p class="conflit-dates">
+                                    📅 Du {{ conflit.dateDebut | date:'dd/MM/yyyy' }}
+                                    au {{ conflit.dateFin | date:'dd/MM/yyyy' }}
+                                </p>
+                            </div>
+
+                            <div *ngIf="conflit.typeConflit === 'INDISPONIBILITE'" class="conflit-type">
+                                <span class="badge badge-danger">Indisponibilité</span>
+                                <p>Motif : {{ conflit.motif || 'Non spécifié' }}</p>
+                                <p class="conflit-dates">
+                                    📅 Du {{ conflit.dateDebut | date:'dd/MM/yyyy' }}
+                                    au {{ conflit.dateFin | date:'dd/MM/yyyy' }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="conflit-actions">
+                            <label class="force-checkbox">
+                                <input type="checkbox"
+                                       [checked]="isAgentForce(conflit.agentId)"
+                                       (change)="toggleAgentForce(conflit.agentId)">
+                                <span>Forcer l'affectation</span>
+                            </label>
+                            <button class="btn-danger-outline"
+                                    (click)="retirerAgentConflit(conflit.agentId)">
+                                Retirer le participant
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="icon-btn-close"
+                        (click)="closeConflitModal()"
+                        title="Fermer">
+                    <i class="pi pi-times"></i>
+                </button>
+                <button type="button" class="icon-btn-warning"
+                        [disabled]="isLoading || agentsForces.size === 0"
+                        (click)="confirmerAvecForcage()"
+                        title="Confirmer malgré les conflits">
+                    <i class="pi" [ngClass]="isLoading ? 'pi-spin pi-spinner' : 'pi-check'"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- MODAL REMPLACEMENT                                           -->
+    <!-- ============================================================ -->
+    <div class="modal-overlay" *ngIf="showRemplacementModal" (click)="closeRemplacementModal()">
+        <div class="modal-content modal-large" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+                <div>
+                    <h2>🔄 Remplacer le participant</h2>
+                    <p class="modal-subtitle">
+                        Sélectionner un agent disponible sur la période pour remplir ce slot
+                    </p>
+                </div>
+                <button class="close-btn" (click)="closeRemplacementModal()">×</button>
+            </div>
+
+            <div class="modal-body">
+                <div *ngIf="isLoadingRemplacants" class="loading-container">
+                    <div class="spinner"></div>
+                    <p>Recherche des agents disponibles...</p>
+                </div>
+
+                <div *ngIf="!isLoadingRemplacants && remplacantsDisponibles.length === 0"
+                     class="empty-state">
+                    <span class="empty-icon">😕</span>
+                    <p>Aucun agent disponible sur cette période</p>
+                    <p class="text-muted">
+                        Vous pouvez forcer l'affectation ou retirer le participant.
+                    </p>
+                </div>
+
+                <div *ngIf="!isLoadingRemplacants && remplacantsDisponibles.length > 0"
+                     class="agents-grid">
+                    <div *ngFor="let agent of remplacantsDisponibles"
+                         class="agent-checkbox"
+                         (click)="confirmerRemplacement(agent)">
+                        <label style="cursor: pointer;">
+                            <div class="agent-info">
+                                <span class="agent-name">{{ agent.prenom }} {{ agent.nom }}</span>
+                                <span class="agent-poste">{{ agent.poste || 'Participant' }}</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="icon-btn-close"
+                        (click)="closeRemplacementModal()"
+                        title="Fermer">
+                    <i class="pi pi-times"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- MODAL DÉTAILS                                                -->
+    <!-- ============================================================ -->
     <div class="modal-overlay" *ngIf="showDetailModal" (click)="closeDetailModal()">
         <div class="modal-content" (click)="$event.stopPropagation()">
             <div class="modal-header">
@@ -344,9 +690,9 @@
                     <span class="detail-label">Titre :</span>
                     <span class="detail-value">{{ selectedActivite.titre }}</span>
                 </div>
-                <div class="detail-row" *ngIf="selectedActivite.description">
-                    <span class="detail-label">Description :</span>
-                    <span class="detail-value">{{ selectedActivite.description }}</span>
+                <div class="detail-row" *ngIf="selectedActivite.commentaires">
+                    <span class="detail-label">Commentaires :</span>
+                    <span class="detail-value">{{ selectedActivite.commentaires }}</span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Période :</span>
@@ -373,19 +719,32 @@
                     </span>
                 </div>
                 <div class="detail-row">
-                    <span class="detail-label">Agents ({{ selectedActivite.agentNoms?.length || 0 }}) :</span>
+                    <span class="detail-label">Participants ({{ selectedActivite.agentNoms?.length || 0 }}) :</span>
                     <span class="detail-value">
-                        <span *ngFor="let nom of selectedActivite.agentNoms" class="agent-tag">
+                        <span *ngFor="let nom of selectedActivite.agentNoms; let idx = index" class="agent-tag">
                             {{ nom }}
+                            <span *ngIf="selectedActivite.agentZonesList?.[idx]" class="zone-tag">
+                                📍 {{ selectedActivite.agentZonesList?.[idx] }}
+                            </span>
                         </span>
                     </span>
                 </div>
+                <div class="detail-row" *ngIf="selectedActivite.createdByNom">
+                    <span class="detail-label">Créé par :</span>
+                    <span class="detail-value">{{ selectedActivite.createdByNom }}</span>
+                </div>
             </div>
             <div class="modal-footer">
-                <button class="btn-secondary" (click)="closeDetailModal()">Fermer</button>
-                <button class="btn-primary" *ngIf="selectedActivite?.statut === 'PLANIFIEE'"
-                        (click)="editActivite(selectedActivite!); closeDetailModal()">
-                    ✏️ Modifier
+                <button type="button" class="icon-btn-close"
+                        (click)="closeDetailModal()"
+                        title="Fermer">
+                    <i class="pi pi-times"></i>
+                </button>
+                <button type="button" class="icon-btn-edit"
+                        *ngIf="selectedActivite?.statut === 'PLANIFIEE' || selectedActivite?.statut === 'CREEE'"
+                        (click)="editActivite(selectedActivite!); closeDetailModal()"
+                        title="Modifier">
+                    <i class="pi pi-pencil"></i>
                 </button>
             </div>
         </div>

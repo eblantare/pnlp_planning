@@ -1,0 +1,12 @@
+databaseChangeLog:
+  - changeSet:
+      id: 010-add-zone-affectation
+      author: pnlp
+      changes:
+        - addColumn:
+            tableName: affectations
+            columns:
+              - column:
+                  name: zone_affectation
+                  type: varchar(255)
+                  remarks: "Zone d'affectation (région, district, préfecture...)"

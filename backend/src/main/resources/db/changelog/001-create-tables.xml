@@ -58,6 +58,9 @@
             </column>
             <column name="telephone" type="VARCHAR(20)"/>
             <column name="poste" type="VARCHAR(100)"/>
+            <!-- ✅ NOUVELLE COLONNE -->
+            <column name="unite" type="VARCHAR(255)"/>
+            <!-- ✅ FIN AJOUT -->
             <column name="direction_id" type="UUID">
                 <constraints foreignKeyName="fk_agent_direction"
                              references="directions(id)"/>
@@ -72,8 +75,30 @@
         </createTable>
     </changeSet>
 
+    <!-- Table des profils (rôles) -->
+    <changeSet id="000-create-profils" author="pnlp">
+        <createTable tableName="profils">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="code" type="VARCHAR(50)">
+                <constraints unique="true" nullable="false"/>
+            </column>
+            <column name="libelle" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="VARCHAR(500)"/>
+            <column name="niveau" type="INTEGER" defaultValueNumeric="1"/>
+            <column name="actif" type="BOOLEAN" defaultValueBoolean="true"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+    </changeSet>
+
+    <!-- NOTE: Les profils ne sont PAS préchargés.
+         L'utilisateur les créera via l'application. -->
+
     <!-- Table des utilisateurs -->
-    <!-- IMPORTANT: créée AVANT activites car activites référence utilisateurs -->
     <changeSet id="007-create-utilisateurs" author="pnlp">
         <createTable tableName="utilisateurs">
             <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
@@ -88,20 +113,23 @@
             <column name="email" type="VARCHAR(255)">
                 <constraints unique="true"/>
             </column>
-            <column name="role" type="VARCHAR(50)">
-                <constraints nullable="false"/>
+            <column name="profil_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_user_profil"
+                             references="profils(id)"/>
             </column>
             <column name="agent_id" type="UUID">
                 <constraints foreignKeyName="fk_user_agent"
                              references="agents(id)"/>
             </column>
             <column name="actif" type="BOOLEAN" defaultValueBoolean="true"/>
+            <column name="derniere_connexion" type="TIMESTAMP"/>
             <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
         </createTable>
     </changeSet>
 
     <!-- Table des activités -->
-    <!-- AJOUT de la colonne created_by avec clé étrangère vers utilisateurs -->
     <changeSet id="004-create-activites" author="pnlp">
         <createTable tableName="activites">
             <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
@@ -122,12 +150,10 @@
             <column name="source_financement" type="VARCHAR(255)"/>
             <column name="statut" type="VARCHAR(50)" defaultValue="PLANIFIEE"/>
             <column name="commentaires" type="TEXT"/>
-            <!-- ✅ COLONNE AJOUTÉE -->
             <column name="created_by" type="UUID">
                 <constraints foreignKeyName="fk_activite_created_by"
                              references="utilisateurs(id)"/>
             </column>
-            <!-- ✅ FIN AJOUT -->
             <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
             <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
         </createTable>

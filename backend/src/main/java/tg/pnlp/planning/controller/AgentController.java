@@ -50,4 +50,11 @@ public class AgentController {
         agentService.deleteAgent(id);
         return ResponseEntity.noContent().build();
     }
+    @PatchMapping("/{id}/statut")
+    @Operation(summary = "Changer le statut d'un agent")
+    public ResponseEntity<AgentDTO> changerStatut(
+            @PathVariable UUID id,
+            @RequestParam Boolean actif) {
+        return ResponseEntity.ok(agentService.changerStatut(id, actif));
+    }
 }

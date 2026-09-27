@@ -1,0 +1,247 @@
+<div class="page-container">
+    <!-- En-tête compact -->
+    <div class="page-header">
+        <div>
+            <h1>Gestion des Profils</h1>
+            <p class="subtitle">Définir les rôles et permissions du système</p>
+        </div>
+        <p-button icon="pi pi-plus"
+                  [rounded]="true"
+                  severity="success"
+                  size="large"
+                  pTooltip="Nouveau profil"
+                  tooltipPosition="left"
+                  (onClick)="openCreateForm()">
+        </p-button>
+    </div>
+
+    <!-- Notifications -->
+    <div *ngIf="successMessage" class="alert alert-success">
+        <i class="pi pi-check-circle"></i> {{ successMessage }}
+    </div>
+    <div *ngIf="errorMessage" class="alert alert-danger">
+        <i class="pi pi-times-circle"></i> {{ errorMessage }}
+    </div>
+
+    <!-- Toolbar : stats + recherche -->
+    <div class="toolbar-row">
+        <div class="stats-inline">
+            <div class="stat-chip">
+                <span class="stat-chip-icon green"><i class="pi pi-users"></i></span>
+                <div class="stat-chip-info">
+                    <span class="stat-chip-value">{{ profils.length }}</span>
+                    <span class="stat-chip-label">Total</span>
+                </div>
+            </div>
+            <div class="stat-chip">
+                <span class="stat-chip-icon blue"><i class="pi pi-check-circle"></i></span>
+                <div class="stat-chip-info">
+                    <span class="stat-chip-value">{{ countActifs() }}</span>
+                    <span class="stat-chip-label">Actifs</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="search-inline">
+            <i class="pi pi-search search-icon"></i>
+            <input type="text" [(ngModel)]="searchTerm" (input)="applyFilters()"
+                   placeholder="Rechercher un profil..." class="search-input">
+            <button *ngIf="searchTerm" class="search-clear" (click)="searchTerm = ''; applyFilters()">
+                <i class="pi pi-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Chargement -->
+    <div *ngIf="isLoading" class="loading-container">
+        <div class="spinner"></div>
+        <p>Chargement des profils...</p>
+    </div>
+
+    <!-- Tableau -->
+    <div *ngIf="!isLoading" class="table-card">
+        <div class="table-header">
+            <div class="table-header-left">
+                <span class="table-title"><i class="pi pi-id-card"></i> Liste des profils</span>
+                <span class="table-count">{{ filteredProfils.length }}</span>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th class="col-num">N°</th>
+                    <th class="col-code">Code</th>
+                    <th class="col-libelle">Libellé</th>
+                    <th class="col-description">Description</th>
+                    <th class="col-niveau">Niveau</th>
+                    <th class="col-statut">Statut</th>
+                    <th class="col-actions">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr *ngFor="let profil of filteredProfils; let i = index" class="data-row">
+                    <td class="col-num">{{ i + 1 }}</td>
+                    <td class="col-code">
+                        <span class="code-badge">{{ profil.code }}</span>
+                    </td>
+                    <td class="col-libelle">
+                        <strong>{{ profil.libelle }}</strong>
+                    </td>
+                    <td class="col-description" [title]="profil.description || ''">
+                        <span class="description-text">
+                            {{ (profil.description || '-') | slice:0:60 }}{{ (profil.description?.length || 0) > 60 ? '...' : '' }}
+                        </span>
+                    </td>
+                    <td class="col-niveau">
+                        <span class="badge-niveau">{{ profil.niveau }}</span>
+                    </td>
+                    <td class="col-statut">
+                        <span class="badge" [ngClass]="profil.actif ? 'badge-actif' : 'badge-inactif'">
+                            {{ profil.actif ? 'Actif' : 'Inactif' }}
+                        </span>
+                    </td>
+                    <td class="col-actions">
+                        <app-action-buttons
+                                [actions]="getActionsFor(profil)"
+                                (actionClick)="onAction($event, profil)">
+                        </app-action-buttons>
+                    </td>
+                </tr>
+                <tr *ngIf="filteredProfils.length === 0">
+                    <td colspan="7" class="empty-row">
+                        <div class="empty-state">
+                            <i class="pi pi-inbox empty-icon"></i>
+                            <p>Aucun profil trouvé</p>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal Formulaire -->
+    <div class="modal-overlay" *ngIf="showForm" (click)="closeForm()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+                <div>
+                    <h2>{{ editingProfil ? 'Modifier le profil' : 'Nouveau profil' }}</h2>
+                    <p class="modal-subtitle">
+                        {{ editingProfil ? 'Modifiez les informations du profil' : 'Créez un nouveau rôle' }}
+                    </p>
+                </div>
+                <!-- ✅ Bouton ✕ dans le header -->
+                <button type="button" class="icon-btn-close" (click)="closeForm()" title="Fermer">
+                    <i class="pi pi-times"></i>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <div class="form-row-modal">
+                    <label class="form-label">Code <span class="required">*</span></label>
+                    <input pInputText type="text" [(ngModel)]="nouveauProfil.code"
+                           class="form-input-full" placeholder="Ex: ADMIN"
+                           [disabled]="!!editingProfil">
+                    <span class="form-hint">Code unique en majuscules</span>
+                </div>
+
+                <div class="form-row-modal">
+                    <label class="form-label">Libellé <span class="required">*</span></label>
+                    <input pInputText type="text" [(ngModel)]="nouveauProfil.libelle"
+                           class="form-input-full" placeholder="Ex: Administrateur">
+                </div>
+
+                <div class="form-row-modal">
+                    <label class="form-label">Description</label>
+                    <textarea pInputTextarea [(ngModel)]="nouveauProfil.description"
+                              class="form-input-full" rows="4"
+                              placeholder="Description du rôle..."></textarea>
+                </div>
+
+                <div class="form-row-modal">
+                    <label class="form-label">Niveau (1-100)</label>
+                    <input pInputText type="number" [(ngModel)]="nouveauProfil.niveau"
+                           class="form-input-full" min="1" max="100"
+                           placeholder="10">
+                    <span class="form-hint">Niveau hiérarchique (100 = plus élevé)</span>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <!-- ✅ Bouton ✕ Annuler -->
+                <button type="button" class="icon-btn-close"
+                        (click)="closeForm()"
+                        title="Annuler">
+                    <i class="pi pi-times"></i>
+                </button>
+
+                <!-- ✅ Bouton ✓ Créer/Modifier -->
+                <button type="button" class="icon-btn-save"
+                        [disabled]="isLoading || !nouveauProfil.code || !nouveauProfil.libelle"
+                        (click)="saveProfil()"
+                        [title]="editingProfil ? 'Modifier' : 'Créer'">
+                    <i class="pi" [ngClass]="isLoading ? 'pi-spin pi-spinner' : 'pi-check'"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Détail -->
+    <div class="modal-overlay" *ngIf="showDetailModal" (click)="closeDetailModal()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+            <div class="modal-header modal-header-detail">
+                <div>
+                    <h2><i class="pi pi-info-circle"></i> Détails du profil</h2>
+                    <p class="modal-subtitle">Informations complètes</p>
+                </div>
+                <button type="button" class="icon-btn-close" (click)="closeDetailModal()" title="Fermer">
+                    <i class="pi pi-times"></i>
+                </button>
+            </div>
+
+            <div class="modal-body" *ngIf="selectedProfil">
+                <div class="detail-row">
+                    <span class="detail-label">Code :</span>
+                    <span class="detail-value"><strong>{{ selectedProfil.code }}</strong></span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Libellé :</span>
+                    <span class="detail-value">{{ selectedProfil.libelle }}</span>
+                </div>
+                <div class="detail-row" *ngIf="selectedProfil.description">
+                    <span class="detail-label">Description :</span>
+                    <span class="detail-value">{{ selectedProfil.description }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Niveau :</span>
+                    <span class="detail-value">
+                        <span class="badge-niveau">{{ selectedProfil.niveau }}</span>
+                    </span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Statut :</span>
+                    <span class="detail-value">
+                        <span class="badge" [ngClass]="selectedProfil.actif ? 'badge-actif' : 'badge-inactif'">
+                            {{ selectedProfil.actif ? 'Actif' : 'Inactif' }}
+                        </span>
+                    </span>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="icon-btn-close"
+                        (click)="closeDetailModal()"
+                        title="Fermer">
+                    <i class="pi pi-times"></i>
+                </button>
+                <button type="button" class="icon-btn-edit"
+                        (click)="editProfil(selectedProfil!); closeDetailModal()"
+                        title="Modifier">
+                    <i class="pi pi-pencil"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,347 @@
+<div class="page-container">
+    <!-- En-tête -->
+    <div class="page-header">
+        <div>
+            <h1>Gestion des Utilisateurs</h1>
+            <p class="subtitle">Créer et gérer les comptes utilisateurs</p>
+        </div>
+        <p-button icon="pi pi-plus"
+                  [rounded]="true"
+                  severity="success"
+                  size="large"
+                  pTooltip="Nouvel utilisateur"
+                  tooltipPosition="left"
+                  (onClick)="openCreateForm()">
+        </p-button>
+    </div>
+
+    <!-- Notifications -->
+    <div *ngIf="successMessage" class="alert alert-success">
+        <i class="pi pi-check-circle"></i> {{ successMessage }}
+    </div>
+    <div *ngIf="errorMessage" class="alert alert-danger">
+        <i class="pi pi-times-circle"></i> {{ errorMessage }}
+    </div>
+
+    <!-- Statistiques -->
+    <div class="stats-row">
+        <div class="stat-mini">
+            <span class="stat-mini-icon green"><i class="pi pi-users"></i></span>
+            <div class="stat-mini-info">
+                <span class="stat-mini-value">{{ utilisateurs.length }}</span>
+                <span class="stat-mini-label">Utilisateurs</span>
+            </div>
+        </div>
+        <div class="stat-mini">
+            <span class="stat-mini-icon blue"><i class="pi pi-check-circle"></i></span>
+            <div class="stat-mini-info">
+                <span class="stat-mini-value">{{ countActifs() }}</span>
+                <span class="stat-mini-label">Actifs</span>
+            </div>
+        </div>
+        <div class="stat-mini">
+            <span class="stat-mini-icon orange"><i class="pi pi-key"></i></span>
+            <div class="stat-mini-info">
+                <span class="stat-mini-value">{{ profils.length }}</span>
+                <span class="stat-mini-label">Profils</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="filters-card">
+        <div class="filters-header">
+            <h3><i class="pi pi-filter"></i> Filtres</h3>
+        </div>
+        <div class="filters-grid-2">
+            <div class="filter-group">
+                <label>Recherche</label>
+                <input type="text" [(ngModel)]="searchTerm" (input)="applyFilters()"
+                       placeholder="Username, email, agent..." class="form-control">
+            </div>
+            <div class="filter-group">
+                <label>Profil</label>
+                <select [(ngModel)]="filterProfil" (change)="applyFilters()" class="form-control">
+                    <option value="">Tous les profils</option>
+                    <option *ngFor="let p of profils" [value]="p.id">{{ p.libelle }}</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chargement -->
+    <div *ngIf="isLoading" class="loading-container">
+        <div class="spinner"></div>
+        <p>Chargement des utilisateurs...</p>
+    </div>
+
+    <!-- Tableau -->
+    <div *ngIf="!isLoading" class="table-card">
+        <div class="table-header">
+            <div class="table-header-left">
+                <span class="table-title"><i class="pi pi-users"></i> Liste des utilisateurs</span>
+                <span class="table-count">{{ filteredUtilisateurs.length }} utilisateur(s)</span>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th class="col-num">N°</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Profil</th>
+                    <th>Agent lié</th>
+                    <th class="col-statut">Statut</th>
+                    <th class="col-actions">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr *ngFor="let user of filteredUtilisateurs; let i = index" class="data-row">
+                    <td class="col-num">{{ i + 1 }}</td>
+                    <td><strong>{{ user.username }}</strong></td>
+                    <td>{{ user.email || '-' }}</td>
+                    <td>
+                        <span class="badge" [ngClass]="getProfilBadgeClass(user.profilCode)">
+                            {{ user.profilLibelle || user.profilCode }}
+                        </span>
+                    </td>
+                    <td>{{ user.agentNom || '-' }}</td>
+                    <td class="col-statut">
+                        <span class="badge" [ngClass]="user.actif ? 'badge-actif' : 'badge-inactif'">
+                            {{ user.actif ? 'Actif' : 'Inactif' }}
+                        </span>
+                    </td>
+                    <td class="col-actions">
+                        <app-action-buttons
+                                [actions]="getActionsFor(user)"
+                                (actionClick)="onAction($event, user)">
+                        </app-action-buttons>
+                    </td>
+                </tr>
+                <tr *ngIf="filteredUtilisateurs.length === 0">
+                    <td colspan="7" class="empty-row">
+                        <div class="empty-state">
+                            <i class="pi pi-inbox empty-icon"></i>
+                            <p>Aucun utilisateur trouvé</p>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal Formulaire -->
+    <div class="modal-overlay" *ngIf="showForm" (click)="closeForm()">
+        <div class="modal-content modal-large" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+                <div>
+                    <h2>{{ editingUtilisateur ? 'Modifier l\'utilisateur' : 'Nouvel utilisateur' }}</h2>
+                    <p class="modal-subtitle">
+                        {{ editingUtilisateur ? 'Modifiez les informations' : 'Créez un nouveau compte' }}
+                    </p>
+                </div>
+                <button class="close-btn" (click)="closeForm()">
+                    <i class="pi pi-times"></i>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <div class="form-section">
+                    <h3 class="form-section-title">
+                        <i class="pi pi-key"></i> Identifiants
+                    </h3>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">
+                                Nom d'utilisateur <span class="required">*</span>
+                            </label>
+                            <input type="text" [(ngModel)]="formData.username"
+                                   class="form-control"
+                                   [disabled]="!!editingUtilisateur"
+                                   placeholder="Ex: admin_sys">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">
+                                Mot de passe
+                                <span class="required" *ngIf="!editingUtilisateur">*</span>
+                            </label>
+                            <div class="password-input-wrapper">
+                                <input [type]="showPassword ? 'text' : 'password'"
+                                       [(ngModel)]="formData.password"
+                                       (ngModelChange)="onPasswordChange()"
+                                       class="form-control"
+                                       [placeholder]="editingUtilisateur ? 'Laisser vide pour conserver' : 'Mot de passe sécurisé'">
+                                <button type="button"
+                                        class="toggle-password-btn"
+                                        (click)="showPassword = !showPassword">
+                                    <i class="pi" [ngClass]="showPassword ? 'pi-eye-slash' : 'pi-eye'"></i>
+                                </button>
+                            </div>
+
+                            <!-- Barre de force du mot de passe -->
+                            <div *ngIf="formData.password" class="password-strength">
+                                <div class="strength-bar">
+                                    <div class="strength-bar-fill"
+                                         [style.width.%]="passwordValidation.strength * 25"
+                                         [style.background]="getPasswordStrengthColor()"></div>
+                                </div>
+                                <span class="strength-label" [style.color]="getPasswordStrengthColor()">
+                                    {{ getPasswordStrengthLabel() }}
+                               </span>
+                            </div>
+
+                            <!-- Liste des règles -->
+                            <div *ngIf="formData.password" class="password-rules">
+                                <div *ngFor="let error of passwordValidation.errors" class="rule-item invalid">
+                                    <i class="pi pi-times-circle"></i> {{ error }}
+                                </div>
+                                <div *ngIf="passwordValidation.valid" class="rule-item valid">
+                                    <i class="pi pi-check-circle"></i> Mot de passe valide
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" [(ngModel)]="formData.email"
+                               class="form-control" placeholder="Ex: user@pnlp.tg">
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="form-section-title">
+                        <i class="pi pi-id-card"></i> Profil
+                    </h3>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            Profil <span class="required">*</span>
+                        </label>
+                        <select [(ngModel)]="formData.profilId" class="form-control">
+                            <option value="">-- Sélectionner un profil --</option>
+                            <option *ngFor="let p of profils" [value]="p.id">
+                                {{ p.libelle }} ({{ p.code }})
+                            </option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="form-section-title">
+                        <i class="pi pi-user"></i> Agent associé <span class="required">*</span>
+                    </h3>
+                    <p class="form-hint">
+                        Liez ce compte à un agent. Un agent ne peut avoir qu'un seul compte utilisateur.
+                    </p>
+
+                    <div class="form-group">
+                        <input type="text" [(ngModel)]="searchAgent"
+                               (input)="filterAgentsList()"
+                               class="form-control"
+                               placeholder="🔍 Rechercher un agent...">
+                    </div>
+
+                    <div class="agents-list">
+                        <div *ngFor="let agent of filteredAgents"
+                             class="agent-option"
+                             [class.selected]="formData.agentId === agent.id"
+                             [class.disabled]="!isAgentDisponible(agent.id!)"
+                             (click)="isAgentDisponible(agent.id!) && (formData.agentId = agent.id)">
+                            <div>
+                                <strong>{{ agent.prenom }} {{ agent.nom }}</strong>
+                                <span>{{ agent.poste || 'Agent' }}</span>
+                                <span *ngIf="!isAgentDisponible(agent.id!)" class="agent-occupied">
+                                    ⚠️ Déjà associé à un utilisateur
+                                </span>
+                            </div>
+                            <span *ngIf="formData.agentId === agent.id" class="check">✓</span>
+                        </div>
+                        <div *ngIf="filteredAgents.length === 0" class="no-agents">
+                            Aucun agent disponible
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="icon-btn-close"
+                        (click)="closeForm()"
+                        title="Annuler">
+                    <i class="pi pi-times"></i>
+                </button>
+                <button type="button" class="icon-btn-save"
+                        [disabled]="isLoading || !formData.username || !formData.profilId || !formData.agentId"
+                        (click)="saveUtilisateur()"
+                        [title]="editingUtilisateur ? 'Modifier' : 'Créer'">
+                    <i class="pi" [ngClass]="isLoading ? 'pi-spin pi-spinner' : 'pi-check'"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Détails -->
+    <div class="modal-overlay" *ngIf="showDetailModal" (click)="closeDetailModal()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+            <div class="modal-header modal-header-detail">
+                <div>
+                    <h2><i class="pi pi-info-circle"></i> Détails de l'utilisateur</h2>
+                    <p class="modal-subtitle">Informations complètes</p>
+                </div>
+                <button class="close-btn" (click)="closeDetailModal()">
+                    <i class="pi pi-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" *ngIf="selectedUtilisateur">
+                <div class="detail-row">
+                    <span class="detail-label">Username :</span>
+                    <span class="detail-value">{{ selectedUtilisateur.username }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Email :</span>
+                    <span class="detail-value">{{ selectedUtilisateur.email || '-' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Profil :</span>
+                    <span class="detail-value">
+                        <span class="badge" [ngClass]="getProfilBadgeClass(selectedUtilisateur.profilCode)">
+                            {{ selectedUtilisateur.profilLibelle }}
+                        </span>
+                    </span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Agent lié :</span>
+                    <span class="detail-value">{{ selectedUtilisateur.agentNom || '-' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Statut :</span>
+                    <span class="detail-value">
+                        <span class="badge" [ngClass]="selectedUtilisateur.actif ? 'badge-actif' : 'badge-inactif'">
+                            {{ selectedUtilisateur.actif ? 'Actif' : 'Inactif' }}
+                        </span>
+                    </span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Créé le :</span>
+                    <span class="detail-value">{{ selectedUtilisateur.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="icon-btn-close"
+                        (click)="closeDetailModal()"
+                        title="Fermer">
+                    <i class="pi pi-times"></i>
+                </button>
+                <button type="button" class="icon-btn-edit"
+                        (click)="editUtilisateur(selectedUtilisateur!); closeDetailModal()"
+                        title="Modifier">
+                    <i class="pi pi-pencil"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

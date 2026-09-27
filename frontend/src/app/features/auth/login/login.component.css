@@ -1,0 +1,247 @@
+/* ============================================================
+   PAGE DE LOGIN
+   ============================================================ */
+.login-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #1B5E20 0%, #2E7D32 50%, #388E3C 100%);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.login-page::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
+    animation: rotate 30s linear infinite;
+}
+
+@keyframes rotate {
+    to { transform: rotate(360deg); }
+}
+
+/* ============================================================
+   CARTE DE LOGIN
+   ============================================================ */
+.login-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    width: 100%;
+    max-width: 440px;
+    padding: 40px;
+    position: relative;
+    z-index: 1;
+    animation: slideUp 0.5s ease;
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   LOGO
+   ============================================================ */
+.login-logo {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+/* ✅ Logo PNLP (image) */
+.app-logo {
+    height: 80px;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto 16px auto;
+    transition: transform 0.2s ease;
+}
+
+.app-logo:hover {
+    transform: scale(1.05);
+}
+
+.login-logo h1 {
+    color: #1B5E20;
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0 0 4px 0;
+}
+
+.login-subtitle {
+    color: #6B7280;
+    font-size: 12px;
+    margin: 0;
+}
+
+/* ============================================================
+   FORMULAIRE
+   ============================================================ */
+.login-form h2 {
+    color: #333;
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 24px 0;
+    text-align: center;
+}
+
+.login-error {
+    background: #FFEBEE;
+    color: #C62828;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-left: 4px solid #C62828;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 8px;
+}
+
+.form-group label i {
+    color: #1B5E20;
+    font-size: 13px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #E5E7EB;
+    border-radius: 10px;
+    font-size: 14px;
+    transition: all 0.2s;
+    box-sizing: border-box;
+    outline: none;
+}
+
+.form-group input:focus {
+    border-color: #1B5E20;
+    box-shadow: 0 0 0 4px rgba(27, 94, 32, 0.1);
+}
+
+.form-group input:disabled {
+    background: #F9FAFB;
+    cursor: not-allowed;
+}
+
+.password-input {
+    position: relative;
+}
+
+.password-input input {
+    padding-right: 48px;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #6B7280;
+    cursor: pointer;
+    padding: 6px;
+    font-size: 16px;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.toggle-password:hover {
+    background: #F3F4F6;
+    color: #1B5E20;
+}
+
+/* ============================================================
+   LIEN MOT DE PASSE OUBLIÉ
+   ============================================================ */
+.forgot-password-link {
+    text-align: right;
+    margin-bottom: 16px;
+    margin-top: -8px;
+}
+
+.forgot-password-link a {
+    color: #1B5E20;
+    font-size: 13px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.15s;
+}
+
+.forgot-password-link a:hover {
+    text-decoration: underline;
+    color: #2E7D32;
+}
+
+/* ============================================================
+   BOUTON
+   ============================================================ */
+.login-button {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+    margin-top: 8px;
+    box-shadow: 0 4px 12px rgba(27, 94, 32, 0.3);
+}
+
+.login-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(27, 94, 32, 0.4);
+}
+
+.login-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+.login-footer {
+    text-align: center;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #F3F4F6;
+}
+
+.login-footer p {
+    color: #9CA3AF;
+    font-size: 12px;
+    margin: 0;
+}

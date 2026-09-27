@@ -24,35 +24,47 @@ public class ConflictService {
     private final IndisponibiliteRepository indisponibiliteRepository;
 
     /**
-     * Vérifie si un agent est disponible pour une période donnée
+     * Vérifie si un agent est disponible pour une période donnée.
+     *
+     * @param agentId          ID de l'agent
+     * @param debut            Date de début de la période
+     * @param fin              Date de fin de la période
+     * @param activiteIdExclue ID de l'activité à exclure de la vérification (null si aucune)
+     * @return true si l'agent est disponible, false sinon
      */
     public boolean estDisponible(UUID agentId, LocalDate debut, LocalDate fin, UUID activiteIdExclue) {
-        // Vérifier les indisponibilités
+        // 1. Vérifier les indisponibilités
         List<Indisponibilite> indisponibilites = indisponibiliteRepository
                 .findByAgentIdAndDateDebutLessThanEqualAndDateFinGreaterThanEqual(
                         agentId, fin, debut);
 
         if (!indisponibilites.isEmpty()) {
-            log.warn("Agent {} indisponible du {} au {} (indisponibilité)",
-                    agentId, debut, fin);
+            log.warn("Agent {} indisponible du {} au {} ({} indisponibilité(s))",
+                    agentId, debut, fin, indisponibilites.size());
             return false;
         }
 
-        // Vérifier les affectations existantes
-        List<Affectation> affectations = affectationRepository
-                .findByAgentIdAndActiviteDateDebutLessThanEqualAndActiviteDateFinGreaterThanEqual(
-                        agentId, fin, debut);
-
-        // Exclure l'activité en cours de modification
+        // 2. Vérifier les affectations existantes EN EXCLUANT l'activité courante
+        List<Affectation> affectations;
         if (activiteIdExclue != null) {
-            affectations = affectations.stream()
-                    .filter(a -> !a.getActivite().getId().equals(activiteIdExclue))
-                    .toList();
+            // ✅ Utilise la requête avec exclusion pour éviter les faux positifs
+            affectations = affectationRepository.findByAgentIdExcludingActivite(
+                    agentId, activiteIdExclue, fin, debut);
+
+            log.debug("Vérification conflit agent {} (exclusion activité {}): {} affectation(s)",
+                    agentId, activiteIdExclue, affectations.size());
+        } else {
+            affectations = affectationRepository
+                    .findByAgentIdAndActiviteDateDebutLessThanEqualAndActiviteDateFinGreaterThanEqual(
+                            agentId, fin, debut);
+
+            log.debug("Vérification conflit agent {} (sans exclusion): {} affectation(s)",
+                    agentId, affectations.size());
         }
 
         if (!affectations.isEmpty()) {
-            log.warn("Agent {} a déjà {} affectation(s) sur la période",
-                    agentId, affectations.size());
+            log.warn("Agent {} a déjà {} affectation(s) sur la période du {} au {}",
+                    agentId, affectations.size(), debut, fin);
             return false;
         }
 
@@ -86,22 +98,19 @@ public class ConflictService {
                         .build());
             }
 
-            // Vérifier les autres affectations
+            // Vérifier les autres affectations (exclure l'activité courante)
             List<Affectation> autresAffectations = affectationRepository
-                    .findByAgentIdAndActiviteDateDebutLessThanEqualAndActiviteDateFinGreaterThanEqual(
-                            agent.getId(), fin, debut);
+                    .findByAgentIdExcludingActivite(agent.getId(), activiteId, fin, debut);
 
             for (Affectation autre : autresAffectations) {
-                if (!autre.getActivite().getId().equals(activiteId)) {
-                    conflits.add(ConflitDTO.builder()
-                            .agentId(agent.getId())
-                            .agentNom(agent.getNomComplet())
-                            .typeConflit("AFFECTATION_SIMULTANEE")
-                            .activiteConflit(autre.getActivite().getTitre())
-                            .dateDebut(autre.getActivite().getDateDebut())
-                            .dateFin(autre.getActivite().getDateFin())
-                            .build());
-                }
+                conflits.add(ConflitDTO.builder()
+                        .agentId(agent.getId())
+                        .agentNom(agent.getNomComplet())
+                        .typeConflit("AFFECTATION_SIMULTANEE")
+                        .activiteConflit(autre.getActivite().getTitre())
+                        .dateDebut(autre.getActivite().getDateDebut())
+                        .dateFin(autre.getActivite().getDateFin())
+                        .build());
             }
         }
 

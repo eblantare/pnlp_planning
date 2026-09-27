@@ -1,0 +1,20 @@
+databaseChangeLog:
+  - changeSet:
+      id: 210-add-statut-brouillon
+      author: pnlp
+      comment: "Ajout du statut BROUILLON pour les activités"
+      changes:
+        - sql:
+            sql: |
+              -- PostgreSQL : supprimer l'ancienne contrainte si elle existe
+              ALTER TABLE activites DROP CONSTRAINT IF EXISTS activites_statut_check;
+
+              -- Recréer la contrainte avec le nouveau statut
+              ALTER TABLE activites ADD CONSTRAINT activites_statut_check
+                CHECK (statut IN ('BROUILLON', 'PLANIFIEE', 'EN_COURS', 'TERMINEE', 'ANNULEE', 'REPORTEE'));
+      rollback:
+        - sql:
+            sql: |
+              ALTER TABLE activites DROP CONSTRAINT IF EXISTS activites_statut_check;
+              ALTER TABLE activites ADD CONSTRAINT activites_statut_check
+                CHECK (statut IN ('PLANIFIEE', 'EN_COURS', 'TERMINEE', 'ANNULEE', 'REPORTEE'));

@@ -1,0 +1,27 @@
+databaseChangeLog:
+  - changeSet:
+      id: 101-default-admin-user
+      author: pnlp
+      comment: "Création de l'utilisateur admin par défaut"
+      changes:
+        - sql:
+            sql: |
+              INSERT INTO utilisateurs (id, username, password, email, profil_id, actif, created_at, updated_at)
+              SELECT
+                gen_random_uuid(),
+                'admin',
+                '$2a$10$wzGXeZyDOatUGtK0.jHWSe6GefomMgEgPapIanjmNbL/byFErbSPu',
+                'admin@pnlp.tg',
+                (SELECT id FROM profils WHERE code = 'SUPER_ADMIN' LIMIT 1),
+                true,
+                NOW(),
+                NOW()
+              WHERE NOT EXISTS (
+                SELECT 1 FROM utilisateurs WHERE username = 'admin'
+              )
+              AND EXISTS (
+                SELECT 1 FROM profils WHERE code = 'SUPER_ADMIN'
+              );
+      rollback:
+        - sql:
+            sql: "DELETE FROM utilisateurs WHERE username = 'admin';"

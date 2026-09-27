@@ -34,8 +34,8 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: ${MAIL_USERNAME:pnlp@gmail.com}
-    password: ${MAIL_PASSWORD:password}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
     properties:
       mail:
         smtp:
@@ -53,10 +53,15 @@ server:
   servlet:
     context-path: /api
 
-jwt:
-  secret: ${JWT_SECRET:maCleSecreteTresLongueEtSecuriseePourLePNLP2024}
-  expiration: 86400000 # 24 heures
-  refresh-expiration: 604800000 # 7 jours
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+    expiration-ms: 86400000
+
+  frontend-url: ${FRONTEND_URL:http://localhost:4200}
+
+  password-reset:
+    token-expiration-minutes: 30
 
 springdoc:
   api-docs:

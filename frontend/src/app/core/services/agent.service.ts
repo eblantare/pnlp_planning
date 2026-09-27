@@ -1,4 +1,3 @@
-// src/app/core/services/agent.service.ts
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -11,6 +10,7 @@ export interface Agent {
     email?: string;
     telephone?: string;
     poste?: string;
+    unite?: string;              // ✅ NOUVEAU
     directionId?: string;
     directionNom?: string;
     districtId?: string;
@@ -26,6 +26,7 @@ export interface CreateAgentRequest {
     email?: string;
     telephone?: string;
     poste?: string;
+    unite?: string;              // ✅ NOUVEAU
     directionId?: string;
     districtId?: string;
 }
@@ -68,5 +69,9 @@ export class AgentService {
             .set('debut', debut)
             .set('fin', fin);
         return this.http.get<Agent[]>(`${this.apiUrl}/disponibles`, { params });
+    }
+    changerStatut(id: string, actif: boolean): Observable<Agent> {
+        const params = new HttpParams().set('actif', actif.toString());
+        return this.http.patch<Agent>(`${this.apiUrl}/${id}/statut`, null, { params });
     }
 }

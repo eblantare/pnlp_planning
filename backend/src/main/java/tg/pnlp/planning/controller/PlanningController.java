@@ -25,13 +25,13 @@ public class PlanningController {
 
     @PostMapping("/activites")
     @Operation(summary = "Créer une nouvelle activité")
-    public ResponseEntity<ActiviteDTO> creerActivite(@RequestBody ActiviteDTO dto) {
+    public ResponseEntity<ReponseCreationActiviteDTO> creerActivite(@RequestBody ActiviteDTO dto) {
         return ResponseEntity.ok(planningService.creerActivite(dto));
     }
 
     @PutMapping("/activites/{id}")
     @Operation(summary = "Modifier une activité existante")
-    public ResponseEntity<ActiviteDTO> updateActivite(
+    public ResponseEntity<ReponseCreationActiviteDTO> updateActivite(
             @PathVariable UUID id,
             @RequestBody ActiviteDTO dto) {
         return ResponseEntity.ok(planningService.updateActivite(id, dto));
@@ -87,5 +87,12 @@ public class PlanningController {
             @RequestParam int annee,
             @RequestParam int mois) {
         return ResponseEntity.ok(planningService.getPlanningMensuel(YearMonth.of(annee, mois)));
+    }
+    @GetMapping("/remplacants")
+    @Operation(summary = "Trouver des agents disponibles sur une période")
+    public ResponseEntity<List<AgentDTO>> trouverRemplacants(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate debut,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) {
+        return ResponseEntity.ok(planningService.trouverRemplacantsPossibles(debut, fin));
     }
 }

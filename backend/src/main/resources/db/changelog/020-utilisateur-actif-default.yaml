@@ -1,0 +1,12 @@
+databaseChangeLog:
+  - changeSet:
+      id: 020-utilisateur-actif-default
+      author: pnlp
+      changes:
+        - dropDefaultValue:
+            tableName: utilisateurs
+            columnName: actif
+        - addDefaultValue:
+            tableName: utilisateurs
+            columnName: actif
+            defaultValueBoolean: false

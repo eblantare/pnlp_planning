@@ -1,11 +1,17 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <databaseChangeLog
         xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
-        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
-    <!-- Tables uniquement - pas de données en dur -->
     <include file="db/changelog/001-create-tables.xml"/>
+    <include file="db/changelog/010-add-zone-affectation.yaml"/>
+    <include file="db/changelog/020-utilisateur-actif-default.yaml"/>
+    <include file="db/changelog/100-default-super-admin-profil.yaml"/>
+    <include file="db/changelog/101-default-admin-user.yaml"/>
+    <include file="db/changelog/002-insert-data.xml"/>
+    <include file="db/changelog/200-password-reset-tokens.yaml"/>
+    <include file="db/changelog/210-add-statut-brouillon.yaml"/>
+    <include file="db/changelog/211-dates-nullables-brouillon.yaml"/>
 
 </databaseChangeLog>

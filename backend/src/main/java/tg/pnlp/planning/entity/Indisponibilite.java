@@ -6,11 +6,13 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
 @Table(name = "indisponibilites")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -43,6 +45,19 @@ public class Indisponibilite {
 
     public boolean chevauche(LocalDate debut, LocalDate fin) {
         return !(fin.isBefore(this.dateDebut) || debut.isAfter(this.dateFin));
+    }
+    // ✅ equals/hashCode uniquement sur l'ID
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Indisponibilite indisponibilite = (Indisponibilite) o;
+        return id != null && Objects.equals(id, indisponibilite.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
     }
 
     public enum TypeIndisponibilite {

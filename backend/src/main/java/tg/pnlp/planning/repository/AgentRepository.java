@@ -24,4 +24,5 @@ public interface AgentRepository extends JpaRepository<Agent, UUID> {
             "AND i.dateDebut <= :fin AND i.dateFin >= :debut)")
     List<Agent> findDisponibles(@Param("debut") LocalDate debut,
                                 @Param("fin") LocalDate fin);
+    boolean existsByEmail(String email);
 }

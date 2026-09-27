@@ -1,0 +1,338 @@
+<div class="page-container">
+
+    <!-- EN-TÊTE -->
+    <div class="page-header">
+        <div>
+            <h1>Statistiques du Personnel</h1>
+            <p class="subtitle">Suivi de l'activité et de la charge de travail des agents</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn-export btn-excel" (click)="exportToExcel()" title="Exporter en Excel">
+                <i class="pi pi-file-excel"></i> Excel
+            </button>
+            <button class="btn-export btn-pdf" (click)="exportToPdf()" title="Exporter en PDF">
+                <i class="pi pi-file-pdf"></i> PDF
+            </button>
+        </div>
+    </div>
+
+    <!-- SÉLECTEUR DE PÉRIODE -->
+    <div class="period-selector">
+        <button class="period-nav-btn" (click)="changerAnnee(-1)" title="Année précédente">
+            <i class="pi pi-angle-double-left"></i>
+        </button>
+        <button class="period-nav-btn" (click)="changerMois(-1)" title="Mois précédent">
+            <i class="pi pi-angle-left"></i>
+        </button>
+        <div class="period-display">
+            <span class="period-month">{{ getMoisNom(mois) }}</span>
+            <span class="period-year">{{ annee }}</span>
+        </div>
+        <button class="period-nav-btn" (click)="changerMois(1)" title="Mois suivant">
+            <i class="pi pi-angle-right"></i>
+        </button>
+        <button class="period-nav-btn" (click)="changerAnnee(1)" title="Année suivante">
+            <i class="pi pi-angle-double-right"></i>
+        </button>
+    </div>
+
+    <!-- CHARGEMENT -->
+    <div *ngIf="isLoading" class="loading-container">
+        <div class="spinner"></div>
+        <p>Calcul des statistiques...</p>
+    </div>
+
+    <!-- CONTENU -->
+    <div *ngIf="!isLoading && statistiques">
+
+        <!-- KPIs sur une seule ligne -->
+        <div class="kpi-grid">
+            <div class="kpi-card kpi-green">
+                <div class="kpi-icon"><i class="pi pi-users"></i></div>
+                <div class="kpi-content">
+                    <span class="kpi-value">{{ statistiques.totalAgents }}</span>
+                    <span class="kpi-label">Agents actifs</span>
+                </div>
+            </div>
+            <div class="kpi-card kpi-blue">
+                <div class="kpi-icon"><i class="pi pi-briefcase"></i></div>
+                <div class="kpi-content">
+                    <span class="kpi-value">{{ statistiques.agentsEnMission }}</span>
+                    <span class="kpi-label">En mission</span>
+                </div>
+            </div>
+            <div class="kpi-card kpi-orange">
+                <div class="kpi-icon"><i class="pi pi-check-circle"></i></div>
+                <div class="kpi-content">
+                    <span class="kpi-value">{{ statistiques.agentsDisponibles }}</span>
+                    <span class="kpi-label">Disponibles</span>
+                </div>
+            </div>
+            <div class="kpi-card kpi-purple">
+                <div class="kpi-icon"><i class="pi pi-calendar"></i></div>
+                <div class="kpi-content">
+                    <span class="kpi-value">{{ statistiques.totalActivites }}</span>
+                    <span class="kpi-label">Activités</span>
+                </div>
+            </div>
+            <div class="kpi-card kpi-teal">
+                <div class="kpi-icon"><i class="pi pi-clock"></i></div>
+                <div class="kpi-content">
+                    <span class="kpi-value">{{ statistiques.totalJoursMission }}</span>
+                    <span class="kpi-label">Jours mission</span>
+                </div>
+            </div>
+            <div class="kpi-card kpi-red">
+                <div class="kpi-icon"><i class="pi pi-chart-line"></i></div>
+                <div class="kpi-content">
+                    <span class="kpi-value">{{ statistiques.tauxOccupationMoyen }}%</span>
+                    <span class="kpi-label">Taux moyen</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- CARTES DES AGENTS (scrollables) -->
+        <div class="section-card">
+            <div class="section-header">
+                <h2><i class="pi pi-users"></i> État des agents</h2>
+                <span class="section-subtitle">{{ getMoisNom(mois) }} {{ annee }} — {{ getAllAgentsCards().length }} agent(s)</span>
+            </div>
+            <!-- Cartes agents -->
+            <div class="agents-cards-scroll">
+                <div *ngFor="let agent of getAllAgentsCards()"
+                     class="agent-status-card"
+                     [ngClass]="getStatutCardClass(agent.statut)">
+                    <div class="agent-status-avatar">{{ getInitiales(agent) }}</div>
+                    <div class="agent-status-info">
+                        <span class="agent-status-name" [title]="agent.nomComplet">{{ agent.nomComplet }}</span>
+                        <span class="agent-status-poste">{{ agent.poste || 'Agent' }}</span>
+                        <span class="agent-status-badge" [ngClass]="getStatutBadgeClass(agent.statut)">
+                <i [class]="getStatutIcon(agent.statut)"></i>
+                {{ getStatutLabel(agent.statut) }}
+            </span>
+                    </div>
+                    <div class="agent-status-stats">
+                        <span class="agent-status-days">{{ agent.joursMission }}j</span>
+                        <span class="agent-status-missions">{{ agent.nombreActivites }} mission(s)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAUX D'OCCUPATION DANS UN ACCORDÉON -->
+        <div class="section-card accordion-card">
+            <div class="accordion-header" (click)="toggleOccupationChart()">
+                <div class="accordion-title">
+                    <h2>
+                        <i class="pi pi-chart-bar"></i>
+                        Taux d'occupation par agent
+                    </h2>
+                    <span class="section-subtitle">
+                {{ statistiques.agents.length }} agent(s) — {{ getMoisNom(mois) }} {{ annee }}
+            </span>
+                </div>
+                <i class="pi accordion-icon"
+                   [ngClass]="showOccupationChart ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
+            </div>
+
+            <div class="accordion-content" *ngIf="showOccupationChart">
+                <div class="occupation-chart">
+                    <div *ngFor="let agent of getAgentsSortedByOccupation()"
+                         class="occupation-row">
+                        <div class="occupation-agent">
+                            <span class="occupation-avatar">{{ getInitiales(agent) }}</span>
+                            <span class="occupation-name" [title]="agent.nomComplet">
+                        {{ agent.nomComplet | slice:0:20 }}{{ agent.nomComplet.length > 20 ? '...' : '' }}
+                    </span>
+                        </div>
+                        <div class="occupation-bar-wrapper">
+                            <div class="occupation-bar"
+                                 [style.width.%]="Math.min(agent.tauxOccupation, 100)"
+                                 [style.background]="getTauxColor(agent.tauxOccupation)">
+                            </div>
+                        </div>
+                        <span class="occupation-value" [style.color]="getTauxColor(agent.tauxOccupation)">
+                    {{ agent.tauxOccupation }}%
+                </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RÉPARTITION DES ACTIVITÉS DANS UN ACCORDÉON -->
+        <div class="section-card accordion-card">
+            <div class="accordion-header" (click)="toggleRepartitionChart()">
+                <div class="accordion-title">
+                    <h2>
+                        <i class="pi pi-chart-bar"></i>
+                        Répartition des activités sur {{ annee }}
+                    </h2>
+                    <span class="section-subtitle">Nombre d'activités par mois</span>
+                </div>
+                <i class="pi accordion-icon"
+                   [ngClass]="showRepartitionChart ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
+            </div>
+
+            <div class="accordion-content" *ngIf="showRepartitionChart">
+                <div class="chart-container">
+                    <div class="chart-bars">
+                        <div *ngFor="let item of getMonthsInOrder()"
+                             class="chart-bar-wrapper">
+                            <div class="chart-value">{{ item.value }}</div>
+                            <div class="chart-bar"
+                                 [style.height.%]="getBarHeight(item.value)"
+                                 [class.active]="item.key === getMoisActifLibelle()">
+                            </div>
+                            <div class="chart-label">{{ item.key }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FILTRES -->
+        <div class="filters-card">
+            <div class="filters-header">
+                <h3><i class="pi pi-filter"></i> Filtres</h3>
+                <button *ngIf="hasActiveFilters()" class="btn-reset" (click)="resetFilters()">
+                    <i class="pi pi-refresh"></i> Réinitialiser
+                </button>
+            </div>
+            <div class="filters-grid-2">
+                <div class="filter-group">
+                    <label>Recherche</label>
+                    <input type="text" [(ngModel)]="searchTerm"
+                           (input)="onFilterChange()"
+                           placeholder="Nom, poste, unité..." class="form-control">
+                </div>
+                <div class="filter-group">
+                    <label>Statut</label>
+                    <select [(ngModel)]="filterStatut" (change)="onFilterChange()" class="form-control">
+                        <option value="">Tous les statuts</option>
+                        <option value="EN_MISSION">En mission</option>
+                        <option value="DISPONIBLE">Disponible</option>
+                        <option value="INACTIF">Inactif</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <!-- DÉTAIL PAR AGENT DANS UN ACCORDÉON -->
+        <div class="section-card accordion-card">
+            <div class="accordion-header" (click)="toggleDetailTable()">
+                <div class="accordion-title">
+                    <h2>
+                        <i class="pi pi-list"></i>
+                        Détail par agent
+                    </h2>
+                    <span class="section-subtitle">
+                {{ getFilteredAgents().length }} agent(s) — {{ getMoisNom(mois) }} {{ annee }}
+            </span>
+                </div>
+                <i class="pi accordion-icon"
+                   [ngClass]="showDetailTable ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
+            </div>
+
+            <div class="accordion-content" *ngIf="showDetailTable">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                        <tr>
+                            <th class="col-num">N°</th>
+                            <th>Agent</th>
+                            <th>Poste</th>
+                            <th>Unité</th>
+                            <th class="col-center">Activités</th>
+                            <th class="col-center">Jours mission</th>
+                            <th class="col-center">Taux occupation</th>
+                            <th class="col-center">Statut</th>
+                            <th>Activité en cours</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr *ngFor="let agent of paginatedAgents; let i = index" class="data-row">
+                            <td class="col-num">{{ getStartIndex() + i }}</td>
+                            <td>
+                                <div class="agent-cell">
+                                    <span class="agent-avatar-small">{{ getInitiales(agent) }}</span>
+                                    <strong>{{ agent.nomComplet }}</strong>
+                                </div>
+                            </td>
+                            <td>{{ agent.poste || '-' }}</td>
+                            <td>{{ agent.unite || '-' }}</td>
+                            <td class="col-center">
+                                <span class="badge-count">{{ agent.nombreActivites }}</span>
+                            </td>
+                            <td class="col-center">
+                                <span class="badge-jours">{{ agent.joursMission }}j</span>
+                            </td>
+                            <td class="col-center">
+                                <div class="taux-container">
+                                    <div class="taux-bar">
+                                        <div class="taux-bar-fill"
+                                             [style.width.%]="Math.min(agent.tauxOccupation, 100)"
+                                             [style.background]="getTauxColor(agent.tauxOccupation)">
+                                        </div>
+                                    </div>
+                                    <span class="taux-value" [style.color]="getTauxColor(agent.tauxOccupation)">
+                                {{ agent.tauxOccupation }}%
+                            </span>
+                                </div>
+                            </td>
+                            <td class="col-center">
+                        <span class="badge-statut" [ngClass]="getStatutClass(agent.statut)">
+                            <i [class]="getStatutIcon(agent.statut)"></i>
+                            {{ getStatutLabel(agent.statut) }}
+                        </span>
+                            </td>
+                            <td>
+                                <div *ngIf="agent.activiteEnCours" class="activite-cell">
+                                    <strong>{{ agent.activiteEnCours | slice:0:40 }}{{ agent.activiteEnCours.length > 40 ? '...' : '' }}</strong>
+                                    <span class="activite-periode">{{ agent.periodeActuelle }}</span>
+                                </div>
+                                <span *ngIf="!agent.activiteEnCours" class="text-muted">-</span>
+                            </td>
+                        </tr>
+                        <tr *ngIf="paginatedAgents.length === 0">
+                            <td colspan="9" class="empty-row">
+                                <div class="empty-state">
+                                    <i class="pi pi-inbox empty-icon"></i>
+                                    <p>Aucun agent trouvé</p>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="pagination-container" *ngIf="getFilteredAgents().length > 0">
+                    <div class="pagination-info">
+                        {{ getStartIndex() }} - {{ getEndIndex() }} sur {{ getFilteredAgents().length }}
+                    </div>
+                    <div class="pagination">
+                        <button class="pagination-btn"
+                                [disabled]="currentPage === 1"
+                                (click)="onPageChange(currentPage - 1)">
+                            ◀ Précédent
+                        </button>
+                        <div class="pagination-numbers">
+                            <button *ngFor="let page of pages"
+                                    class="pagination-number"
+                                    [class.active]="page === currentPage"
+                                    (click)="onPageChange(page)">
+                                {{ page }}
+                            </button>
+                        </div>
+                        <button class="pagination-btn"
+                                [disabled]="currentPage === totalPages"
+                                (click)="onPageChange(currentPage + 1)">
+                            Suivant ▶
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+</div>

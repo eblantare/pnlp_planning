@@ -1,72 +1,98 @@
 package tg.pnlp.planning.config;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import tg.pnlp.planning.security.JwtAuthenticationFilter;
 
-import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
+@Slf4j
 public class SecurityConfig {
 
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        log.info("🔐 Configuration de Spring Security");
+
         http
-                // Désactiver CSRF (API REST)
+                // Désactiver CSRF (API REST stateless)
                 .csrf(csrf -> csrf.disable())
 
-                // Activer CORS avec la configuration personnalisée
+                // CORS
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-                // Désactiver la session (API stateless)
+                // Session stateless (pas de session HTTP)
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                // Autoriser TOUS les endpoints pour le moment
+                // Autorisations
                 .authorizeHttpRequests(auth -> auth
-                        .anyRequest().permitAll()
+                        // ✅ Endpoints publics d'authentification
+                        //    Note : Spring Security retire le context-path /api
+                        //    Donc /api/auth/login devient /auth/login
+                        .requestMatchers("/auth/login").permitAll()
+                        .requestMatchers("/auth/logout").permitAll()
+                        .requestMatchers("/auth/register").permitAll()
+                        .requestMatchers("/auth/password/**").permitAll()
+
+                        // Swagger
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**",
+                                "/swagger-resources/**",
+                                "/webjars/**"
+                        ).permitAll()
+
+                        // CORS preflight (OPTIONS)
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // Tout le reste nécessite une authentification
+                        .anyRequest().authenticated()
                 )
 
-                // Désactiver l'authentification par défaut
+                // Désactiver les mécanismes par défaut
+                .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable())
-                .formLogin(form -> form.disable());
+
+                // Ajouter le filtre JWT
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
+        log.info("✅ Spring Security configuré");
 
         return http.build();
     }
 
     @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-
-        // Autoriser le frontend Angular
-        config.setAllowedOrigins(Arrays.asList(
-                "http://localhost:4200",
-                "http://localhost:4201",
-                "http://127.0.0.1:4200"
-        ));
-
-        // Autoriser toutes les méthodes HTTP
-        config.setAllowedMethods(Arrays.asList(
-                "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"
-        ));
-
-        // Autoriser tous les headers
-        config.setAllowedHeaders(Arrays.asList("*"));
-
-        // Autoriser les credentials
+        config.setAllowedOrigins(List.of("http://localhost:4200"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setExposedHeaders(List.of("Authorization"));
         config.setAllowCredentials(true);
-
-        // Exposer les headers utiles
-        config.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));
-
-        // Durée de cache des preflight requests (1 heure)
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
