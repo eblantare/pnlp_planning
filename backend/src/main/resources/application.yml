@@ -34,8 +34,8 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: ${MAIL_USERNAME}
-    password: ${MAIL_PASSWORD}
+    username: ${MAIL_USERNAME:dev@example.com}
+    password: ${MAIL_PASSWORD:dev-password}
     properties:
       mail:
         smtp:
@@ -55,7 +55,7 @@ server:
 
 app:
   jwt:
-    secret: ${JWT_SECRET}
+    secret: ${JWT_SECRET:dev-secret-key-pnlp-2026-changez-en-prod-32chars-min}
     expiration-ms: 86400000
 
   frontend-url: ${FRONTEND_URL:http://localhost:4200}

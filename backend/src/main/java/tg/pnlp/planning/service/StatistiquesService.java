@@ -46,7 +46,9 @@ public class StatistiquesService {
     }
 
     /**
-     * Calcule toutes les statistiques pour un mois donné.
+     * ✅ Calcule toutes les statistiques pour un mois donné.
+     * Prend en compte les activités PLANIFIEES et EN_COURS pour marquer
+     * les agents comme OCCUPES sur la période analysée.
      */
     public StatistiquesGlobalesDTO getStatistiquesMensuelles(int annee, int mois) {
         log.info("Calcul des statistiques pour {} {}", MOIS_LIBELLES[mois - 1], annee);
@@ -141,8 +143,16 @@ public class StatistiquesService {
                 .filter(s -> "EN_MISSION".equals(s.getStatut()))
                 .count();
 
+        long agentsOccupes = statsAgents.stream()
+                .filter(s -> "OCCUPE".equals(s.getStatut()))
+                .count();
+
         long agentsDisponibles = statsAgents.stream()
                 .filter(s -> "DISPONIBLE".equals(s.getStatut()))
+                .count();
+
+        long agentsInactifs = statsAgents.stream()
+                .filter(s -> "INACTIF".equals(s.getStatut()))
                 .count();
 
         int totalJoursMission = statsAgents.stream()
@@ -211,8 +221,9 @@ public class StatistiquesService {
                 .totalAgents(agents.size())
                 .agentsActifs(agents.size())
                 .agentsEnMission((int) agentsEnMission)
+                .agentsOccupes((int) agentsOccupes)         // ✅ NOUVEAU
                 .agentsDisponibles((int) agentsDisponibles)
-                .agentsInactifs(0)
+                .agentsInactifs((int) agentsInactifs)        // ✅ Corrigé (0 → réel)
                 .totalActivites(activites.size())
                 .activitesEnCours(activitesEnCours.size())
                 .totalJoursMission(totalJoursMission)
@@ -258,16 +269,43 @@ public class StatistiquesService {
         return joursUniques.size();
     }
 
-    private String determinerStatut(Agent agent, Set<Activite> activites, LocalDate aujourdHui) {
+    /**
+     * ✅ Détermine le statut d'un agent en tenant compte du MOIS affiché.
+     *
+     * - INACTIF    : agent désactivé
+     * - EN_MISSION : agent en mission ACTUELLEMENT (aujourd'hui entre début/fin)
+     * - OCCUPE     : agent affecté à au moins une activité dans le mois
+     *                (PLANIFIEE, TERMINEE, REPORTEE...) mais pas en cours aujourd'hui
+     * - DISPONIBLE : aucune activité dans le mois affiché
+     */
+    private String determinerStatut(Agent agent,
+                                    Set<Activite> activites,
+                                    LocalDate aujourdHui) {
         if (!agent.getActif()) {
             return "INACTIF";
         }
 
+        // 1. Vérifier si en mission aujourd'hui
         boolean enMission = activites.stream()
                 .anyMatch(a -> aDesDatesValides(a)
                         && !aujourdHui.isBefore(a.getDateDebut())
                         && !aujourdHui.isAfter(a.getDateFin()));
 
-        return enMission ? "EN_MISSION" : "DISPONIBLE";
+        if (enMission) {
+            return "EN_MISSION";
+        }
+
+        // 2. Si l'agent a au moins une activité dans le mois → OCCUPE
+        //    (que ce soit PLANIFIEE, TERMINEE, REPORTEE, etc. — sauf BROUILLON)
+        boolean occupeCeMois = activites.stream()
+                .anyMatch(a -> aDesDatesValides(a)
+                        && a.getStatut() != Activite.StatutActivite.BROUILLON);
+
+        if (occupeCeMois) {
+            return "OCCUPE";
+        }
+
+        // 3. Sinon disponible
+        return "DISPONIBLE";
     }
 }

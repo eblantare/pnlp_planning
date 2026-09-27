@@ -18,6 +18,7 @@ public class StatistiquesGlobalesDTO {
     private int totalAgents;
     private int agentsActifs;
     private int agentsEnMission;
+    private int agentsOccupes;         // ✅ NOUVEAU : agents affectés ce mois mais pas aujourd'hui
     private int agentsDisponibles;
     private int agentsInactifs;
     private int totalActivites;

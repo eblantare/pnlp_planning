@@ -15,7 +15,8 @@ export interface StatistiquesAgent {
     joursMission: number;
     joursOuvrables: number;
     tauxOccupation: number;
-    statut: 'EN_MISSION' | 'DISPONIBLE' | 'INACTIF';
+    // ✅ Ajout du statut OCCUPE
+    statut: 'EN_MISSION' | 'OCCUPE' | 'DISPONIBLE' | 'INACTIF';
     activiteEnCours?: string;
     periodeActuelle?: string;
 }
@@ -27,6 +28,7 @@ export interface StatistiquesGlobales {
     totalAgents: number;
     agentsActifs: number;
     agentsEnMission: number;
+    agentsOccupes: number;             // ✅ NOUVEAU
     agentsDisponibles: number;
     agentsInactifs: number;
     totalActivites: number;

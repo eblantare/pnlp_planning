@@ -137,7 +137,6 @@
     scroll-behavior: smooth;
 }
 
-/* Scrollbar personnalisée */
 .kpi-grid::-webkit-scrollbar {
     height: 6px;
 }
@@ -157,7 +156,7 @@
 }
 
 .kpi-card {
-    flex: 0 0 210px;              /* ✅ Largeur fixe pour chaque carte */
+    flex: 0 0 210px;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -328,96 +327,9 @@
     background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
 }
 
-.agent-status-card.card-disponible {
-    border-left-color: #10B981;
-    background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%);
-}
-
-.agent-status-card.card-inactif {
-    border-left-color: #9CA3AF;
-    background: #F9FAFB;
-    opacity: 0.7;
-}
-
-.agent-status-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 13px;
-    font-weight: 700;
-    flex-shrink: 0;
-}
-
-.agent-status-info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-}
-
-.agent-status-name {
-    font-size: 13px;
-    font-weight: 700;
-    color: #333;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.agent-status-poste {
-    font-size: 10px;
-    color: #6B7280;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.agent-status-stats {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-}
-
-.agent-status-days {
-    font-size: 18px;
-    font-weight: 800;
-    color: #1B5E20;
-    line-height: 1;
-}
-
-.agent-status-missions {
-    font-size: 9px;
-    color: #6B7280;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    margin-top: 2px;
-}
-
-.agent-status-card {
-    flex: 0 0 260px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 14px;
-    background: #F9FAFB;
-    border-radius: 12px;
-    border-left: 4px solid #9CA3AF;
-    transition: all 0.2s;
-}
-
-.agent-status-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
-.agent-status-card.card-en-mission {
-    border-left-color: #F59E0B;
-    background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
+.agent-status-card.card-occupe {
+    border-left-color: #8B5CF6;
+    background: linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%);
 }
 
 .agent-status-card.card-disponible {
@@ -470,7 +382,6 @@
     text-overflow: ellipsis;
 }
 
-/* ✅ Le badge est maintenant dans le flux (sous le poste) */
 .agent-status-badge {
     display: inline-flex;
     align-items: center;
@@ -490,6 +401,11 @@
     color: #92400E;
 }
 
+.agent-status-badge.badge-occupe {
+    background: #EDE9FE;
+    color: #6D28D9;
+}
+
 .agent-status-badge.badge-disponible {
     background: #DCFCE7;
     color: #15803D;
@@ -504,7 +420,7 @@
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    flex-shrink: 0;               /* ✅ Empêche l'écrasement */
+    flex-shrink: 0;
     margin-left: 8px;
 }
 
@@ -523,21 +439,6 @@
     letter-spacing: 0.3px;
     margin-top: 2px;
     white-space: nowrap;
-}
-
-.agent-status-badge.badge-en-mission {
-    background: #FEF3C7;
-    color: #92400E;
-}
-
-.agent-status-badge.badge-disponible {
-    background: #DCFCE7;
-    color: #15803D;
-}
-
-.agent-status-badge.badge-inactif {
-    background: #F3F4F6;
-    color: #6B7280;
 }
 
 /* ============================================================
@@ -897,7 +798,9 @@
     letter-spacing: 0.3px;
 }
 
+/* Statuts dans le tableau */
 .statut-en-mission { background: #FFF3E0; color: #E65100; }
+.statut-occupe { background: #EDE9FE; color: #6D28D9; }         /* ✅ NOUVEAU */
 .statut-disponible { background: #E8F5E9; color: #2E7D32; }
 .statut-inactif { background: #F3F4F6; color: #6B7280; }
 
@@ -1075,6 +978,7 @@
     .header-actions { justify-content: flex-end; }
     .occupation-row { grid-template-columns: 120px 1fr 55px; }
 }
+
 /* ============================================================
    ACCORDÉON
    ============================================================ */
@@ -1231,14 +1135,15 @@
     .accordion-header { padding: 14px 16px; }
     .accordion-content { padding: 0 16px 16px 16px; }
 }
+
 /* Pagination dans l'accordéon */
 .accordion-content .pagination-container {
-    margin: 0 -20px -20px -20px;   /* Étend jusqu'aux bords */
+    margin: 0 -20px -20px -20px;
     border-radius: 0 0 12px 12px;
 }
 
 .accordion-content .table-responsive {
-    margin: 0 -20px;                /* Étend jusqu'aux bords */
+    margin: 0 -20px;
 }
 
 /* Ajustement du graphique dans l'accordéon */

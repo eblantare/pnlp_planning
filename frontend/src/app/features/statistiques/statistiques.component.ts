@@ -31,6 +31,11 @@ export class StatistiquesComponent implements OnInit {
   itemsPerPage = 10;
   pageSizeOptions = [5, 10, 25, 50];
 
+  // États des accordéons
+  showOccupationChart = false;
+  showRepartitionChart = true;
+  showDetailTable = true;
+
   Math = Math;
 
   constructor(
@@ -203,6 +208,7 @@ export class StatistiquesComponent implements OnInit {
   getStatutClass(statut: string): string {
     switch (statut) {
       case 'EN_MISSION': return 'statut-en-mission';
+      case 'OCCUPE': return 'statut-occupe';
       case 'DISPONIBLE': return 'statut-disponible';
       case 'INACTIF': return 'statut-inactif';
       default: return '';
@@ -212,6 +218,7 @@ export class StatistiquesComponent implements OnInit {
   getStatutCardClass(statut: string): string {
     switch (statut) {
       case 'EN_MISSION': return 'card-en-mission';
+      case 'OCCUPE': return 'card-occupe';
       case 'DISPONIBLE': return 'card-disponible';
       case 'INACTIF': return 'card-inactif';
       default: return '';
@@ -221,6 +228,7 @@ export class StatistiquesComponent implements OnInit {
   getStatutBadgeClass(statut: string): string {
     switch (statut) {
       case 'EN_MISSION': return 'badge-en-mission';
+      case 'OCCUPE': return 'badge-occupe';
       case 'DISPONIBLE': return 'badge-disponible';
       case 'INACTIF': return 'badge-inactif';
       default: return '';
@@ -230,6 +238,7 @@ export class StatistiquesComponent implements OnInit {
   getStatutLabel(statut: string): string {
     switch (statut) {
       case 'EN_MISSION': return 'En mission';
+      case 'OCCUPE': return 'Occupé';
       case 'DISPONIBLE': return 'Disponible';
       case 'INACTIF': return 'Inactif';
       default: return statut;
@@ -239,6 +248,7 @@ export class StatistiquesComponent implements OnInit {
   getStatutIcon(statut: string): string {
     switch (statut) {
       case 'EN_MISSION': return 'pi pi-briefcase';
+      case 'OCCUPE': return 'pi pi-clock';
       case 'DISPONIBLE': return 'pi pi-check-circle';
       case 'INACTIF': return 'pi pi-ban';
       default: return 'pi pi-circle';
@@ -338,14 +348,11 @@ export class StatistiquesComponent implements OnInit {
         subtitle
     );
   }
-  showOccupationChart = false;
 
+  // ========== ACCORDÉONS ==========
   toggleOccupationChart(): void {
     this.showOccupationChart = !this.showOccupationChart;
   }
-  // États des accordéons
-  showRepartitionChart = true;   // Ouvre par défaut
-  showDetailTable = true;        // Ouvre par défaut
 
   toggleRepartitionChart(): void {
     this.showRepartitionChart = !this.showRepartitionChart;

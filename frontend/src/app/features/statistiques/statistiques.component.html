@@ -61,6 +61,13 @@
                     <span class="kpi-label">En mission</span>
                 </div>
             </div>
+            <div class="kpi-card kpi-purple">
+                <div class="kpi-icon"><i class="pi pi-clock"></i></div>
+                <div class="kpi-content">
+                    <span class="kpi-value">{{ statistiques.agentsOccupes }}</span>
+                    <span class="kpi-label">Occupés ce mois</span>
+                </div>
+            </div>
             <div class="kpi-card kpi-orange">
                 <div class="kpi-icon"><i class="pi pi-check-circle"></i></div>
                 <div class="kpi-content">
@@ -68,18 +75,11 @@
                     <span class="kpi-label">Disponibles</span>
                 </div>
             </div>
-            <div class="kpi-card kpi-purple">
+            <div class="kpi-card kpi-teal">
                 <div class="kpi-icon"><i class="pi pi-calendar"></i></div>
                 <div class="kpi-content">
                     <span class="kpi-value">{{ statistiques.totalActivites }}</span>
                     <span class="kpi-label">Activités</span>
-                </div>
-            </div>
-            <div class="kpi-card kpi-teal">
-                <div class="kpi-icon"><i class="pi pi-clock"></i></div>
-                <div class="kpi-content">
-                    <span class="kpi-value">{{ statistiques.totalJoursMission }}</span>
-                    <span class="kpi-label">Jours mission</span>
                 </div>
             </div>
             <div class="kpi-card kpi-red">
@@ -97,7 +97,6 @@
                 <h2><i class="pi pi-users"></i> État des agents</h2>
                 <span class="section-subtitle">{{ getMoisNom(mois) }} {{ annee }} — {{ getAllAgentsCards().length }} agent(s)</span>
             </div>
-            <!-- Cartes agents -->
             <div class="agents-cards-scroll">
                 <div *ngFor="let agent of getAllAgentsCards()"
                      class="agent-status-card"
@@ -107,9 +106,9 @@
                         <span class="agent-status-name" [title]="agent.nomComplet">{{ agent.nomComplet }}</span>
                         <span class="agent-status-poste">{{ agent.poste || 'Agent' }}</span>
                         <span class="agent-status-badge" [ngClass]="getStatutBadgeClass(agent.statut)">
-                <i [class]="getStatutIcon(agent.statut)"></i>
-                {{ getStatutLabel(agent.statut) }}
-            </span>
+                            <i [class]="getStatutIcon(agent.statut)"></i>
+                            {{ getStatutLabel(agent.statut) }}
+                        </span>
                     </div>
                     <div class="agent-status-stats">
                         <span class="agent-status-days">{{ agent.joursMission }}j</span>
@@ -128,8 +127,8 @@
                         Taux d'occupation par agent
                     </h2>
                     <span class="section-subtitle">
-                {{ statistiques.agents.length }} agent(s) — {{ getMoisNom(mois) }} {{ annee }}
-            </span>
+                        {{ statistiques.agents.length }} agent(s) — {{ getMoisNom(mois) }} {{ annee }}
+                    </span>
                 </div>
                 <i class="pi accordion-icon"
                    [ngClass]="showOccupationChart ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
@@ -142,8 +141,8 @@
                         <div class="occupation-agent">
                             <span class="occupation-avatar">{{ getInitiales(agent) }}</span>
                             <span class="occupation-name" [title]="agent.nomComplet">
-                        {{ agent.nomComplet | slice:0:20 }}{{ agent.nomComplet.length > 20 ? '...' : '' }}
-                    </span>
+                                {{ agent.nomComplet | slice:0:20 }}{{ agent.nomComplet.length > 20 ? '...' : '' }}
+                            </span>
                         </div>
                         <div class="occupation-bar-wrapper">
                             <div class="occupation-bar"
@@ -152,8 +151,8 @@
                             </div>
                         </div>
                         <span class="occupation-value" [style.color]="getTauxColor(agent.tauxOccupation)">
-                    {{ agent.tauxOccupation }}%
-                </span>
+                            {{ agent.tauxOccupation }}%
+                        </span>
                     </div>
                 </div>
             </div>
@@ -210,12 +209,14 @@
                     <select [(ngModel)]="filterStatut" (change)="onFilterChange()" class="form-control">
                         <option value="">Tous les statuts</option>
                         <option value="EN_MISSION">En mission</option>
+                        <option value="OCCUPE">Occupé</option>
                         <option value="DISPONIBLE">Disponible</option>
                         <option value="INACTIF">Inactif</option>
                     </select>
                 </div>
             </div>
         </div>
+
         <!-- DÉTAIL PAR AGENT DANS UN ACCORDÉON -->
         <div class="section-card accordion-card">
             <div class="accordion-header" (click)="toggleDetailTable()">
@@ -225,8 +226,8 @@
                         Détail par agent
                     </h2>
                     <span class="section-subtitle">
-                {{ getFilteredAgents().length }} agent(s) — {{ getMoisNom(mois) }} {{ annee }}
-            </span>
+                        {{ getFilteredAgents().length }} agent(s) — {{ getMoisNom(mois) }} {{ annee }}
+                    </span>
                 </div>
                 <i class="pi accordion-icon"
                    [ngClass]="showDetailTable ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
@@ -274,15 +275,15 @@
                                         </div>
                                     </div>
                                     <span class="taux-value" [style.color]="getTauxColor(agent.tauxOccupation)">
-                                {{ agent.tauxOccupation }}%
-                            </span>
+                                        {{ agent.tauxOccupation }}%
+                                    </span>
                                 </div>
                             </td>
                             <td class="col-center">
-                        <span class="badge-statut" [ngClass]="getStatutClass(agent.statut)">
-                            <i [class]="getStatutIcon(agent.statut)"></i>
-                            {{ getStatutLabel(agent.statut) }}
-                        </span>
+                                <span class="badge-statut" [ngClass]="getStatutClass(agent.statut)">
+                                    <i [class]="getStatutIcon(agent.statut)"></i>
+                                    {{ getStatutLabel(agent.statut) }}
+                                </span>
                             </td>
                             <td>
                                 <div *ngIf="agent.activiteEnCours" class="activite-cell">

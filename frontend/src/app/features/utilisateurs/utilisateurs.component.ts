@@ -31,7 +31,7 @@ export class UtilisateursComponent implements OnInit {
     utilisateurs: Utilisateur[] = [];
     filteredUtilisateurs: Utilisateur[] = [];
     profils: Profil[] = [];
-    agents: Agent[] = [];
+    agents: Agent[] = [];                // ✅ Contiendra uniquement les agents actifs
     filteredAgents: Agent[] = [];
 
     // Filtres
@@ -53,10 +53,8 @@ export class UtilisateursComponent implements OnInit {
     errorMessage = '';
     successMessage = '';
 
-    // ✅ AJOUT : Mot de passe visible/masqué
     showPassword = false;
 
-    // ✅ AJOUT : Validation du mot de passe
     passwordValidation: PasswordValidationResult = {
         valid: true,
         errors: [],
@@ -95,11 +93,13 @@ export class UtilisateursComponent implements OnInit {
         });
     }
 
+    // ✅ CORRIGÉ : Ne garder que les agents ACTIFS
     loadAgents(): void {
         this.agentService.getAllAgents().subscribe({
             next: (data) => {
-                this.agents = data;
-                this.filteredAgents = data;
+                this.agents = data.filter(a => a.actif === true);
+                this.filteredAgents = [...this.agents];
+                console.log(`${this.agents.length} agent(s) actif(s) chargé(s) pour le modal utilisateur`);
             },
             error: (err: any) => console.error('Erreur chargement agents', err)
         });
@@ -176,9 +176,6 @@ export class UtilisateursComponent implements OnInit {
         this.showPasswordRules = false;
     }
 
-    /**
-     * ✅ Appelée quand le mot de passe change
-     */
     onPasswordChange(): void {
         if (!this.formData.password) {
             this.passwordValidation = { valid: true, errors: [], strength: 0 };
@@ -210,7 +207,6 @@ export class UtilisateursComponent implements OnInit {
             return;
         }
 
-        // ✅ Vérifier que le mot de passe est valide (création ou modification)
         if (!this.editingUtilisateur && !this.formData.password) {
             this.showError('Le mot de passe est obligatoire pour un nouvel utilisateur');
             return;
@@ -380,9 +376,6 @@ export class UtilisateursComponent implements OnInit {
         }
     }
 
-    /**
-     * ✅ Toggle actif/inactif
-     */
     toggleActif(user: Utilisateur): void {
         if (!user.id) return;
 

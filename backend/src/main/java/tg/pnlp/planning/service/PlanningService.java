@@ -234,7 +234,9 @@ public class PlanningService {
         Activite activite = activiteRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Activité non trouvée: " + id));
 
-        Activite.StatutActivite nouveauStatut = activite.getStatut();
+        Activite.StatutActivite ancienStatut = activite.getStatut();
+        Activite.StatutActivite nouveauStatut = ancienStatut;
+
         if (dto.getStatut() != null && !dto.getStatut().isBlank()) {
             try {
                 nouveauStatut = Activite.StatutActivite.valueOf(dto.getStatut().toUpperCase());
@@ -243,6 +245,7 @@ public class PlanningService {
             }
         }
 
+        // Valider selon le NOUVEAU statut
         validerActivite(dto, nouveauStatut);
 
         if (dto.getDateDebut() != null && dto.getDateFin() != null
@@ -250,6 +253,7 @@ public class PlanningService {
             throw new BusinessException("La date de fin doit être après la date de début");
         }
 
+        // Mise à jour des champs
         activite.setTitre(dto.getTitre());
         activite.setDescription(dto.getCommentaires());
         activite.setDateDebut(dto.getDateDebut());
@@ -259,20 +263,23 @@ public class PlanningService {
         activite.setCommentaires(dto.getCommentaires());
         activite.setStatut(nouveauStatut);
 
-        List<UUID> agentIds = new ArrayList<>();
-        List<UUID> agentIdsForces = new ArrayList<>();
-        Map<UUID, String> agentZones = new HashMap<>();
+        // ✅ Récupérer les agents depuis le DTO
+        List<UUID> agentIds = dto.getAgentIds() != null ? dto.getAgentIds() : List.of();
+        List<UUID> agentIdsForces = dto.getAgentIdsForces() != null ? dto.getAgentIdsForces() : List.of();
+        Map<UUID, String> agentZones = dto.getAgentZones() != null ? dto.getAgentZones() : Map.of();
 
-        if (nouveauStatut != Activite.StatutActivite.BROUILLON) {
-            agentIds = dto.getAgentIds() != null ? dto.getAgentIds() : List.of();
-            agentIdsForces = dto.getAgentIdsForces() != null ? dto.getAgentIdsForces() : List.of();
-            agentZones = dto.getAgentZones() != null ? dto.getAgentZones() : Map.of();
-        } else {
+        // ✅ Log pour debug
+        log.info("Update activité '{}' - ancien statut: {}, nouveau statut: {}, agents: {}",
+                activite.getTitre(), ancienStatut, nouveauStatut, agentIds.size());
+
+        // ✅ Si BROUILLON : supprimer toutes les affectations
+        if (nouveauStatut == Activite.StatutActivite.BROUILLON) {
             log.info("Passage en BROUILLON - suppression des affectations existantes");
             affectationRepository.deleteByActiviteId(id);
             affectationRepository.flush();
         }
 
+        // ✅ Vérifier les conflits SEULEMENT si pas BROUILLON et qu'il y a des agents
         List<ConflitAgentDTO> conflits = new ArrayList<>();
         if (!agentIds.isEmpty() && nouveauStatut != Activite.StatutActivite.BROUILLON) {
             conflits = detecterConflits(activite, agentIds, agentIdsForces);
@@ -286,16 +293,23 @@ public class PlanningService {
                     .build();
         }
 
+        // Sauvegarder l'activité
         activite = activiteRepository.save(activite);
 
+        // ✅ Gérer les affectations UNIQUEMENT si pas BROUILLON
         if (nouveauStatut != Activite.StatutActivite.BROUILLON) {
-            if (dto.getAgentIds() != null) {
-                affectationRepository.deleteByActiviteId(id);
-                affectationRepository.flush();
+            // ✅ Toujours supprimer les anciennes affectations
+            affectationRepository.deleteByActiviteId(id);
+            affectationRepository.flush();
 
-                if (!agentIds.isEmpty()) {
-                    creerAffectations(activite, agentIds, agentZones);
-                }
+            // ✅ Puis recréer avec les nouvelles
+            if (!agentIds.isEmpty()) {
+                creerAffectations(activite, agentIds, agentZones);
+                log.info("{} affectation(s) créée(s) pour l'activité '{}'",
+                        agentIds.size(), activite.getTitre());
+            } else {
+                log.warn("Aucun agent fourni pour l'activité planifiée '{}' - l'activité n'aura pas de participants",
+                        activite.getTitre());
             }
         }
 
