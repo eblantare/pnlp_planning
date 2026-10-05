@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import tg.pnlp.planning.dto.ProfilDTO;
 import tg.pnlp.planning.service.ProfilService;
@@ -39,12 +40,14 @@ public class ProfilController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(summary = "Créer un nouveau profil")
     public ResponseEntity<ProfilDTO> createProfil(@RequestBody ProfilDTO dto) {
         return new ResponseEntity<>(profilService.createProfil(dto), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(summary = "Modifier un profil")
     public ResponseEntity<ProfilDTO> updateProfil(@PathVariable UUID id,
                                                   @RequestBody ProfilDTO dto) {
@@ -55,6 +58,7 @@ public class ProfilController {
      * ✅ NOUVEAU : Basculer l'état actif/inactif
      */
     @PatchMapping("/{id}/toggle-actif")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(summary = "Basculer l'état actif/inactif d'un profil")
     public ResponseEntity<ProfilDTO> toggleActif(@PathVariable UUID id) {
         return ResponseEntity.ok(profilService.toggleActif(id));
@@ -64,6 +68,7 @@ public class ProfilController {
      * ✅ MODIFIÉ : Suppression réelle
      */
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @Operation(summary = "Supprimer définitivement un profil")
     public ResponseEntity<Void> deleteProfil(@PathVariable UUID id) {
         profilService.deleteProfil(id);

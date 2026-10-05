@@ -7,9 +7,9 @@ export interface Utilisateur {
     id: string;
     username: string;
     email?: string;
-    profilId?: string;
-    profilCode?: string;
-    profilLibelle?: string;
+    profilIds?: string[];
+    profilCodes?: string[];       // ✅ NOUVEAU
+    profilLibelles?: string[];    // ✅ NOUVEAU
     agentId?: string;
     agentNom?: string;
     actif: boolean;
@@ -79,9 +79,36 @@ export class AuthService {
         return this.currentUserSubject.value;
     }
 
-    hasRole(role: string): boolean {
+    /**
+     * ✅ Retourne la liste des profils de l'utilisateur courant.
+     */
+    getProfilsCodes(): string[] {
         const user = this.getCurrentUser();
-        return user?.profilCode === role;
+        return user?.profilCodes || [];
+    }
+
+    /**
+     * ✅ Vérifie si l'utilisateur a AU MOINS UN des rôles donnés.
+     */
+    hasAnyRole(...roles: string[]): boolean {
+        const userProfils = this.getProfilsCodes();
+        return roles.some(role => userProfils.includes(role));
+    }
+
+    /**
+     * ✅ Compatibilité : vérifier UN SEUL rôle.
+     * @deprecated Préférez hasAnyRole() pour le multi-profils.
+     */
+    hasRole(role: string): boolean {
+        return this.hasAnyRole(role);
+    }
+
+    /**
+     * ✅ Vérifie si l'utilisateur a TOUS les rôles donnés.
+     */
+    hasAllRoles(...roles: string[]): boolean {
+        const userProfils = this.getProfilsCodes();
+        return roles.every(role => userProfils.includes(role));
     }
 
     private saveToken(token: string): void {

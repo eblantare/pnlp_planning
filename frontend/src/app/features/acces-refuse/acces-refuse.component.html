@@ -1,0 +1,23 @@
+<div class="acces-refuse-container">
+    <div class="acces-refuse-card">
+        <div class="icon-wrapper">
+            <span class="icon">🚫</span>
+        </div>
+        <h1>Accès refusé</h1>
+        <p class="subtitle">
+            Vous n'avez pas les permissions nécessaires pour accéder à cette page.
+        </p>
+        <p class="hint">
+            Si vous pensez qu'il s'agit d'une erreur, veuillez contacter votre administrateur.
+        </p>
+
+        <div class="actions">
+            <button class="btn-primary" (click)="retourAuDashboard()">
+                <i class="pi pi-home"></i> Retour au tableau de bord
+            </button>
+            <button class="btn-secondary" (click)="seDeconnecter()">
+                <i class="pi pi-sign-out"></i> Se déconnecter
+            </button>
+        </div>
+    </div>
+</div>

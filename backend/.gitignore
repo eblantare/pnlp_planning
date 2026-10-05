@@ -1,0 +1,11 @@
+# Uploads (fichiers utilisateurs)
+uploads/*
+!uploads/.gitkeep
+
+
+# Configuration locale avec secrets (NE PAS COMMITTER)
+application-local.yml
+application-local.yaml
+application-*.local.yml
+uploads/*
+!uploads/.gitkeep

@@ -38,7 +38,7 @@ export class UtilisateursComponent implements OnInit {
     searchTerm = '';
     filterProfil = '';
 
-    // Formulaire
+    // ✅ Formulaire — profilIds est maintenant un TABLEAU
     formData: any = this.getEmptyForm();
     editingUtilisateur: Utilisateur | null = null;
     searchAgent = '';
@@ -75,12 +75,13 @@ export class UtilisateursComponent implements OnInit {
         this.loadUtilisateurs();
     }
 
+    // ✅ tableau pour profilIds
     getEmptyForm(): any {
         return {
             username: '',
             password: '',
             email: '',
-            profilId: '',
+            profilIds: [] as string[],
             agentId: '',
             actif: true
         };
@@ -93,7 +94,7 @@ export class UtilisateursComponent implements OnInit {
         });
     }
 
-    // ✅ CORRIGÉ : Ne garder que les agents ACTIFS
+    // ✅ Ne garder que les agents ACTIFS
     loadAgents(): void {
         this.agentService.getAllAgents().subscribe({
             next: (data) => {
@@ -133,8 +134,11 @@ export class UtilisateursComponent implements OnInit {
             );
         }
 
+        // ✅ Filtre par profil (cherche dans la LISTE profilIds)
         if (this.filterProfil) {
-            filtered = filtered.filter(u => u.profilId === this.filterProfil);
+            filtered = filtered.filter(u =>
+                u.profilIds?.includes(this.filterProfil)
+            );
         }
 
         this.filteredUtilisateurs = filtered;
@@ -157,7 +161,7 @@ export class UtilisateursComponent implements OnInit {
             username: user.username,
             password: '',
             email: user.email || '',
-            profilId: user.profilId || '',
+            profilIds: user.profilIds ? [...user.profilIds] : [],   // ✅ Copie du tableau
             agentId: user.agentId || '',
             actif: user.actif
         };
@@ -196,9 +200,42 @@ export class UtilisateursComponent implements OnInit {
         this.showPassword = !this.showPassword;
     }
 
+    // ============================================================
+    // ✅ NOUVELLES MÉTHODES POUR LES PROFILS MULTIPLES
+    // ============================================================
+
+    /**
+     * Ajoute / retire un profil de la sélection.
+     */
+    toggleProfil(profilId: string): void {
+        const idx = this.formData.profilIds.indexOf(profilId);
+        if (idx > -1) {
+            this.formData.profilIds.splice(idx, 1);
+        } else {
+            this.formData.profilIds.push(profilId);
+        }
+    }
+
+    /**
+     * Vérifie si un profil est sélectionné.
+     */
+    isProfilSelected(profilId: string): boolean {
+        return this.formData.profilIds.includes(profilId);
+    }
+
+    // ============================================================
+    // SAUVEGARDE
+    // ============================================================
+
     saveUtilisateur(): void {
-        if (!this.formData.username || !this.formData.profilId) {
-            this.showError('Le nom d\'utilisateur et le profil sont obligatoires');
+        if (!this.formData.username) {
+            this.showError('Le nom d\'utilisateur est obligatoire');
+            return;
+        }
+
+        // ✅ Validation : au moins un profil
+        if (!this.formData.profilIds || this.formData.profilIds.length === 0) {
+            this.showError('Veuillez sélectionner au moins un profil');
             return;
         }
 
@@ -226,7 +263,7 @@ export class UtilisateursComponent implements OnInit {
             const request: UpdateUtilisateurRequest = {
                 email: this.formData.email || undefined,
                 password: this.formData.password || undefined,
-                profilId: this.formData.profilId,
+                profilIds: this.formData.profilIds,       // ✅ Tableau
                 agentId: this.formData.agentId,
                 actif: this.formData.actif
             };
@@ -246,7 +283,7 @@ export class UtilisateursComponent implements OnInit {
                 username: this.formData.username,
                 password: this.formData.password,
                 email: this.formData.email || undefined,
-                profilId: this.formData.profilId,
+                profilIds: this.formData.profilIds,       // ✅ Tableau
                 agentId: this.formData.agentId
             };
             this.utilisateurService.createUtilisateur(request).subscribe({
@@ -312,6 +349,7 @@ export class UtilisateursComponent implements OnInit {
         return !this.utilisateurs.some(u => u.agentId === agentId);
     }
 
+    // ✅ Badge class par code de profil
     getProfilBadgeClass(code?: string): string {
         const classes: { [key: string]: string } = {
             'SUPER_ADMIN': 'badge-super-admin',

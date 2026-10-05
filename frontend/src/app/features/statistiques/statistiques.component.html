@@ -18,22 +18,77 @@
 
     <!-- SÉLECTEUR DE PÉRIODE -->
     <div class="period-selector">
-        <button class="period-nav-btn" (click)="changerAnnee(-1)" title="Année précédente">
-            <i class="pi pi-angle-double-left"></i>
-        </button>
-        <button class="period-nav-btn" (click)="changerMois(-1)" title="Mois précédent">
-            <i class="pi pi-angle-left"></i>
-        </button>
-        <div class="period-display">
-            <span class="period-month">{{ getMoisNom(mois) }}</span>
-            <span class="period-year">{{ annee }}</span>
+        <div class="period-mode-tabs">
+            <button class="mode-tab" [class.active]="modePeriode === 'SEMAINE'"
+                    (click)="setModePeriode('SEMAINE')">
+                <i class="pi pi-calendar"></i> Semaine
+            </button>
+            <button class="mode-tab" [class.active]="modePeriode === 'MOIS'"
+                    (click)="setModePeriode('MOIS')">
+                <i class="pi pi-calendar"></i> Mois
+            </button>
+            <button class="mode-tab" [class.active]="modePeriode === 'ANNEE'"
+                    (click)="setModePeriode('ANNEE')">
+                <i class="pi pi-calendar"></i> Année
+            </button>
+            <button class="mode-tab" [class.active]="modePeriode === 'INTERVALLE'"
+                    (click)="setModePeriode('INTERVALLE')">
+                <i class="pi pi-sliders-h"></i> Intervalle
+            </button>
         </div>
-        <button class="period-nav-btn" (click)="changerMois(1)" title="Mois suivant">
-            <i class="pi pi-angle-right"></i>
-        </button>
-        <button class="period-nav-btn" (click)="changerAnnee(1)" title="Année suivante">
-            <i class="pi pi-angle-double-right"></i>
-        </button>
+
+        <div class="period-controls">
+            <ng-container *ngIf="modePeriode === 'SEMAINE'">
+                <button class="period-nav-btn" (click)="changerSemaine(-1)">
+                    <i class="pi pi-angle-left"></i>
+                </button>
+                <div class="period-display-small">{{ getLibelleSemaine() }}</div>
+                <button class="period-nav-btn" (click)="changerSemaine(1)">
+                    <i class="pi pi-angle-right"></i>
+                </button>
+            </ng-container>
+
+            <ng-container *ngIf="modePeriode === 'MOIS'">
+                <button class="period-nav-btn" (click)="changerAnnee(-1)">
+                    <i class="pi pi-angle-double-left"></i>
+                </button>
+                <button class="period-nav-btn" (click)="changerMois(-1)">
+                    <i class="pi pi-angle-left"></i>
+                </button>
+                <div class="period-display">
+                    <span class="period-month">{{ getMoisNom(mois) }}</span>
+                    <span class="period-year">{{ annee }}</span>
+                </div>
+                <button class="period-nav-btn" (click)="changerMois(1)">
+                    <i class="pi pi-angle-right"></i>
+                </button>
+                <button class="period-nav-btn" (click)="changerAnnee(1)">
+                    <i class="pi pi-angle-double-right"></i>
+                </button>
+            </ng-container>
+
+            <ng-container *ngIf="modePeriode === 'ANNEE'">
+                <button class="period-nav-btn" (click)="changerAnnee(-1)">
+                    <i class="pi pi-angle-left"></i>
+                </button>
+                <div class="period-display">
+                    <span class="period-month">{{ annee }}</span>
+                </div>
+                <button class="period-nav-btn" (click)="changerAnnee(1)">
+                    <i class="pi pi-angle-right"></i>
+                </button>
+            </ng-container>
+
+            <ng-container *ngIf="modePeriode === 'INTERVALLE'">
+                <label class="date-label">Du</label>
+                <input type="date" class="date-input" [(ngModel)]="intervalleDebut">
+                <label class="date-label">au</label>
+                <input type="date" class="date-input" [(ngModel)]="intervalleFin">
+                <button class="btn-apply" (click)="loadStatistiques()">
+                    <i class="pi pi-search"></i> Appliquer
+                </button>
+            </ng-container>
+        </div>
     </div>
 
     <!-- CHARGEMENT -->
@@ -45,7 +100,7 @@
     <!-- CONTENU -->
     <div *ngIf="!isLoading && statistiques">
 
-        <!-- KPIs sur une seule ligne -->
+        <!-- KPIs -->
         <div class="kpi-grid">
             <div class="kpi-card kpi-green">
                 <div class="kpi-icon"><i class="pi pi-users"></i></div>
@@ -59,6 +114,13 @@
                 <div class="kpi-content">
                     <span class="kpi-value">{{ statistiques.agentsEnMission }}</span>
                     <span class="kpi-label">En mission</span>
+                </div>
+            </div>
+            <div class="kpi-card kpi-teal">
+                <div class="kpi-icon"><i class="pi pi-calendar-clock"></i></div>
+                <div class="kpi-content">
+                    <span class="kpi-value">{{ statistiques.agentsAuProgramme || 0 }}</span>
+                    <span class="kpi-label">Au programme</span>
                 </div>
             </div>
             <div class="kpi-card kpi-purple">
@@ -75,13 +137,6 @@
                     <span class="kpi-label">Disponibles</span>
                 </div>
             </div>
-            <div class="kpi-card kpi-teal">
-                <div class="kpi-icon"><i class="pi pi-calendar"></i></div>
-                <div class="kpi-content">
-                    <span class="kpi-value">{{ statistiques.totalActivites }}</span>
-                    <span class="kpi-label">Activités</span>
-                </div>
-            </div>
             <div class="kpi-card kpi-red">
                 <div class="kpi-icon"><i class="pi pi-chart-line"></i></div>
                 <div class="kpi-content">
@@ -91,16 +146,35 @@
             </div>
         </div>
 
-        <!-- CARTES DES AGENTS (scrollables) -->
+        <!-- CARTES DES AGENTS -->
         <div class="section-card">
             <div class="section-header">
                 <h2><i class="pi pi-users"></i> État des agents</h2>
-                <span class="section-subtitle">{{ getMoisNom(mois) }} {{ annee }} — {{ getAllAgentsCards().length }} agent(s)</span>
+                <span class="section-subtitle">
+                    {{ getMoisNom(mois) }} {{ annee }} — {{ getFilteredAgentsCards().length }} agent(s)
+                </span>
             </div>
+
+            <div class="agents-search-bar">
+                <i class="pi pi-search"></i>
+                <input type="text"
+                       [(ngModel)]="searchAgentCard"
+                       placeholder="Rechercher un agent par nom, prénom ou poste..."
+                       class="agents-search-input">
+                <button *ngIf="searchAgentCard"
+                        class="agents-search-clear"
+                        (click)="searchAgentCard = ''"
+                        title="Effacer">
+                    <i class="pi pi-times"></i>
+                </button>
+            </div>
+
             <div class="agents-cards-scroll">
-                <div *ngFor="let agent of getAllAgentsCards()"
+                <div *ngFor="let agent of getFilteredAgentsCards()"
                      class="agent-status-card"
-                     [ngClass]="getStatutCardClass(agent.statut)">
+                     [ngClass]="getStatutCardClass(agent.statut)"
+                     [title]="getTooltipAgentCard(agent)"
+                     (click)="ouvrirDetailsAgent(agent)">
                     <div class="agent-status-avatar">{{ getInitiales(agent) }}</div>
                     <div class="agent-status-info">
                         <span class="agent-status-name" [title]="agent.nomComplet">{{ agent.nomComplet }}</span>
@@ -109,16 +183,38 @@
                             <i [class]="getStatutIcon(agent.statut)"></i>
                             {{ getStatutLabel(agent.statut) }}
                         </span>
+                        <span class="agent-status-tache" *ngIf="agent.tacheEnCours">
+                            <i class="pi pi-arrow-right"></i>
+                            {{ agent.tacheEnCours | slice:0:35 }}{{ agent.tacheEnCours.length > 35 ? '...' : '' }}
+                        </span>
                     </div>
                     <div class="agent-status-stats">
-                        <span class="agent-status-days">{{ agent.joursMission }}j</span>
-                        <span class="agent-status-missions">{{ agent.nombreActivites }} mission(s)</span>
+                        <span class="agent-status-days"
+                              [title]="'Total jours de mission : ' + (agent.joursMission || 0) + 'j'">
+                            {{ agent.joursMission }}j
+                        </span>
+                        <!-- ✅ Nombre TOTAL de missions (résident + non résident) -->
+                        <span class="agent-status-missions"
+                              [title]="(agent.missionsTotal || 0) + ' mission(s) : ' + (agent.missionsResident || 0) + ' résident + ' + (agent.missionsNonResident || 0) + ' non résident'">
+                            {{ agent.missionsTotal || 0 }} mission(s)
+                        </span>
+                        <!-- ✅ Détail : jours résident + jours non-résident -->
+                        <span class="agent-status-detail"
+                              [title]="'🏠 Résident : ' + (agent.joursResident || 0) + 'j / 🚗 Non résident : ' + (agent.joursNonResident || 0) + 'j'">
+                            <span class="detail-res">🏠 {{ agent.joursResident || 0 }}j</span>
+                            <span class="detail-non-res">🚗 {{ agent.joursNonResident || 0 }}j</span>
+                        </span>
                     </div>
+                </div>
+
+                <div *ngIf="getFilteredAgentsCards().length === 0" class="no-agents-found">
+                    <i class="pi pi-search"></i>
+                    <p>Aucun agent trouvé</p>
                 </div>
             </div>
         </div>
 
-        <!-- TAUX D'OCCUPATION DANS UN ACCORDÉON -->
+        <!-- TAUX D'OCCUPATION -->
         <div class="section-card accordion-card">
             <div class="accordion-header" (click)="toggleOccupationChart()">
                 <div class="accordion-title">
@@ -135,19 +231,34 @@
             </div>
 
             <div class="accordion-content" *ngIf="showOccupationChart">
+                <div class="occupation-legend">
+                    <span class="legend-item">
+                        <span class="legend-dot" style="background:#2E7D32"></span> Résident
+                    </span>
+                    <span class="legend-item">
+                        <span class="legend-dot" style="background:#E65100"></span> Non résident
+                    </span>
+                </div>
+
                 <div class="occupation-chart">
                     <div *ngFor="let agent of getAgentsSortedByOccupation()"
-                         class="occupation-row">
+                         class="occupation-row"
+                         [title]="getTooltipOccupation(agent)">
                         <div class="occupation-agent">
                             <span class="occupation-avatar">{{ getInitiales(agent) }}</span>
                             <span class="occupation-name" [title]="agent.nomComplet">
                                 {{ agent.nomComplet | slice:0:20 }}{{ agent.nomComplet.length > 20 ? '...' : '' }}
                             </span>
                         </div>
-                        <div class="occupation-bar-wrapper">
-                            <div class="occupation-bar"
-                                 [style.width.%]="Math.min(agent.tauxOccupation, 100)"
-                                 [style.background]="getTauxColor(agent.tauxOccupation)">
+                        <div class="occupation-bar-wrapper stacked">
+                            <div class="occupation-bar-resident"
+                                 [style.width.%]="Math.min(agent.tauxResident || 0, 100)"
+                                 [title]="'🏠 Résident : ' + (agent.tauxResident || 0) + '% (' + (agent.joursResident || 0) + 'j / ' + (agent.missionsResident || 0) + ' missions)'">
+                            </div>
+                            <div class="occupation-bar-non-resident"
+                                 [style.left.%]="Math.min(agent.tauxResident || 0, 100)"
+                                 [style.width.%]="Math.min(agent.tauxNonResident || 0, 100 - (agent.tauxResident || 0))"
+                                 [title]="'🚗 Non résident : ' + (agent.tauxNonResident || 0) + '% (' + (agent.joursNonResident || 0) + 'j / ' + (agent.missionsNonResident || 0) + ' missions)'">
                             </div>
                         </div>
                         <span class="occupation-value" [style.color]="getTauxColor(agent.tauxOccupation)">
@@ -158,7 +269,7 @@
             </div>
         </div>
 
-        <!-- RÉPARTITION DES ACTIVITÉS DANS UN ACCORDÉON -->
+        <!-- RÉPARTITION DES ACTIVITÉS -->
         <div class="section-card accordion-card">
             <div class="accordion-header" (click)="toggleRepartitionChart()">
                 <div class="accordion-title">
@@ -189,6 +300,54 @@
             </div>
         </div>
 
+        <!-- RÉPARTITION PAR SOURCE DE FINANCEMENT -->
+        <div class="section-card accordion-card" *ngIf="statistiques.repartitionParFinancement?.length">
+            <div class="accordion-header" (click)="toggleFinancementChart()">
+                <div class="accordion-title">
+                    <h2>
+                        <i class="pi pi-chart-bar"></i>
+                        Répartition par source de financement
+                    </h2>
+                    <span class="section-subtitle">
+                        {{ statistiques.repartitionParFinancement?.length }} source(s) — {{ getPeriodeLibelle() }}
+                    </span>
+                </div>
+                <i class="pi accordion-icon"
+                   [ngClass]="showFinancementChart ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
+            </div>
+
+            <div class="accordion-content" *ngIf="showFinancementChart">
+                <div class="financement-chart">
+                    <div *ngFor="let f of statistiques.repartitionParFinancement"
+                         class="financement-row"
+                         [title]="f.source + ' — ' + f.totalActivites + ' activités — ' + f.activitesRealisees + ' réalisées, ' + f.activitesRestantes + ' restantes — ' + f.tauxRealisation + '% réalisation'">
+                        <div class="financement-source">
+                            <span class="financement-nom">{{ f.source }}</span>
+                        </div>
+                        <div class="financement-bar-wrapper">
+                            <div class="financement-bar-realise"
+                                 [style.width.%]="getFinancementBarWidth(f.activitesRealisees)">
+                            </div>
+                            <div class="financement-bar-restant"
+                                 [style.width.%]="getFinancementBarWidth(f.activitesRestantes)"
+                                 [style.left.%]="getFinancementBarWidth(f.activitesRealisees)">
+                            </div>
+                        </div>
+                        <div class="financement-stats">
+                            <span class="fin-realise">{{ f.activitesRealisees }} ✓</span>
+                            <span class="fin-restant">{{ f.activitesRestantes }} ⏳</span>
+                            <span class="fin-total">/ {{ f.totalActivites }}</span>
+                        </div>
+                    </div>
+
+                    <div class="financement-legend">
+                        <span class="legend-item"><span class="legend-dot legend-realise"></span> Réalisé (Terminée)</span>
+                        <span class="legend-item"><span class="legend-dot legend-restant"></span> Restant (Planifiée + En cours)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- FILTRES -->
         <div class="filters-card">
             <div class="filters-header">
@@ -209,6 +368,7 @@
                     <select [(ngModel)]="filterStatut" (change)="onFilterChange()" class="form-control">
                         <option value="">Tous les statuts</option>
                         <option value="EN_MISSION">En mission</option>
+                        <option value="AU_PROGRAMME">Au programme</option>
                         <option value="OCCUPE">Occupé</option>
                         <option value="DISPONIBLE">Disponible</option>
                         <option value="INACTIF">Inactif</option>
@@ -217,7 +377,7 @@
             </div>
         </div>
 
-        <!-- DÉTAIL PAR AGENT DANS UN ACCORDÉON -->
+        <!-- DÉTAIL PAR AGENT -->
         <div class="section-card accordion-card">
             <div class="accordion-header" (click)="toggleDetailTable()">
                 <div class="accordion-title">
@@ -235,18 +395,20 @@
 
             <div class="accordion-content" *ngIf="showDetailTable">
                 <div class="table-responsive">
-                    <table class="data-table">
+                    <table class="data-table detail-table">
                         <thead>
                         <tr>
                             <th class="col-num">N°</th>
                             <th>Agent</th>
                             <th>Poste</th>
-                            <th>Unité</th>
                             <th class="col-center">Activités</th>
+                            <th class="col-center">🏠 Résident</th>
+                            <th class="col-center">🚗 Non résident</th>
+                            <th class="col-center">📋 Programme</th>
                             <th class="col-center">Jours mission</th>
-                            <th class="col-center">Taux occupation</th>
                             <th class="col-center">Statut</th>
-                            <th>Activité en cours</th>
+                            <th>Activité en cours / au programme</th>
+                            <th class="col-center">Historique</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -259,25 +421,36 @@
                                 </div>
                             </td>
                             <td>{{ agent.poste || '-' }}</td>
-                            <td>{{ agent.unite || '-' }}</td>
                             <td class="col-center">
-                                <span class="badge-count">{{ agent.nombreActivites }}</span>
+                                <!-- ✅ Total missions (résident + non résident) -->
+                                <span class="badge-count"
+                                      [title]="(agent.missionsTotal || 0) + ' mission(s) hors programme : ' + (agent.missionsResident || 0) + ' résident + ' + (agent.missionsNonResident || 0) + ' non résident'">
+                                    {{ agent.missionsTotal || 0 }}
+                                </span>
                             </td>
                             <td class="col-center">
-                                <span class="badge-jours">{{ agent.joursMission }}j</span>
+                                <span class="badge-resident-count"
+                                      [title]="(agent.missionsResident || 0) + ' mission(s) résident'">
+                                    {{ agent.missionsResident || 0 }}
+                                </span>
                             </td>
                             <td class="col-center">
-                                <div class="taux-container">
-                                    <div class="taux-bar">
-                                        <div class="taux-bar-fill"
-                                             [style.width.%]="Math.min(agent.tauxOccupation, 100)"
-                                             [style.background]="getTauxColor(agent.tauxOccupation)">
-                                        </div>
-                                    </div>
-                                    <span class="taux-value" [style.color]="getTauxColor(agent.tauxOccupation)">
-                                        {{ agent.tauxOccupation }}%
-                                    </span>
-                                </div>
+                                <span class="badge-non-resident-count"
+                                      [title]="(agent.missionsNonResident || 0) + ' mission(s) non résident'">
+                                    {{ agent.missionsNonResident || 0 }}
+                                </span>
+                            </td>
+                            <td class="col-center">
+                                <span class="badge-programme-count"
+                                      [title]="(agent.missionsProgramme || 0) + ' activité(s) au programme'">
+                                    {{ agent.missionsProgramme || 0 }}
+                                </span>
+                            </td>
+                            <td class="col-center">
+                                <span class="badge-jours"
+                                      [title]="'🏠 ' + (agent.joursResident || 0) + 'j en résident / 🚗 ' + (agent.joursNonResident || 0) + 'j en non-résident'">
+                                    {{ agent.joursMission }}j
+                                </span>
                             </td>
                             <td class="col-center">
                                 <span class="badge-statut" [ngClass]="getStatutClass(agent.statut)">
@@ -286,15 +459,22 @@
                                 </span>
                             </td>
                             <td>
-                                <div *ngIf="agent.activiteEnCours" class="activite-cell">
-                                    <strong>{{ agent.activiteEnCours | slice:0:40 }}{{ agent.activiteEnCours.length > 40 ? '...' : '' }}</strong>
+                                <div *ngIf="agent.tacheEnCours" class="activite-cell">
+                                    <strong>{{ agent.tacheEnCours | slice:0:40 }}{{ agent.tacheEnCours.length > 40 ? '...' : '' }}</strong>
                                     <span class="activite-periode">{{ agent.periodeActuelle }}</span>
                                 </div>
-                                <span *ngIf="!agent.activiteEnCours" class="text-muted">-</span>
+                                <span *ngIf="!agent.tacheEnCours" class="text-muted">-</span>
+                            </td>
+                            <td class="col-center">
+                                <button class="btn-historique"
+                                        (click)="ouvrirHistorique(agent)"
+                                        title="Voir l'historique détaillé">
+                                    <i class="pi pi-history"></i> Historique
+                                </button>
                             </td>
                         </tr>
                         <tr *ngIf="paginatedAgents.length === 0">
-                            <td colspan="9" class="empty-row">
+                            <td colspan="11" class="empty-row">
                                 <div class="empty-state">
                                     <i class="pi pi-inbox empty-icon"></i>
                                     <p>Aucun agent trouvé</p>
@@ -334,6 +514,239 @@
             </div>
         </div>
 
+    </div>
 
+    <!-- MODAL DÉTAILS DE L'AGENT -->
+    <div class="modal-overlay" *ngIf="showAgentDetailsModal" (click)="closeAgentDetailsModal()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+                <div>
+                    <h2>👤 Détails de l'agent</h2>
+                    <p class="modal-subtitle" *ngIf="selectedAgentDetails">
+                        {{ selectedAgentDetails.nomComplet }} — {{ getMoisNom(mois) }} {{ annee }}
+                    </p>
+                </div>
+                <button class="close-btn" (click)="closeAgentDetailsModal()">×</button>
+            </div>
+
+            <div class="modal-body" *ngIf="selectedAgentDetails">
+                <div class="agent-details-header">
+                    <div class="agent-details-avatar">{{ getInitiales(selectedAgentDetails) }}</div>
+                    <div class="agent-details-info">
+                        <h3>{{ selectedAgentDetails.nomComplet }}</h3>
+                        <span class="agent-details-poste">{{ selectedAgentDetails.poste || 'Agent' }}</span>
+                        <span class="agent-status-badge" [ngClass]="getStatutBadgeClass(selectedAgentDetails.statut)">
+                            <i [class]="getStatutIcon(selectedAgentDetails.statut)"></i>
+                            {{ getStatutLabel(selectedAgentDetails.statut) }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="agent-details-kpis">
+                    <!-- ✅ Total missions -->
+                    <div class="agent-detail-kpi">
+                        <span class="kpi-val">{{ selectedAgentDetails.missionsTotal || 0 }}</span>
+                        <span class="kpi-lab">Missions total</span>
+                    </div>
+                    <div class="agent-detail-kpi kpi-res">
+                        <span class="kpi-val">{{ selectedAgentDetails.missionsResident || 0 }}</span>
+                        <span class="kpi-lab">🏠 Résident</span>
+                    </div>
+                    <div class="agent-detail-kpi kpi-non-res">
+                        <span class="kpi-val">{{ selectedAgentDetails.missionsNonResident || 0 }}</span>
+                        <span class="kpi-lab">🚗 Non résident</span>
+                    </div>
+                    <div class="agent-detail-kpi">
+                        <span class="kpi-val">{{ selectedAgentDetails.joursMission }}j</span>
+                        <span class="kpi-lab">Jours mission</span>
+                    </div>
+                    <div class="agent-detail-kpi kpi-programme">
+                        <span class="kpi-val">{{ selectedAgentDetails.missionsProgramme || 0 }}</span>
+                        <span class="kpi-lab">📋 Programme</span>
+                    </div>
+                    <div class="agent-detail-kpi">
+                        <span class="kpi-val">{{ selectedAgentDetails.tauxOccupation }}%</span>
+                        <span class="kpi-lab">Taux occupation</span>
+                    </div>
+                </div>
+
+                <div class="agent-details-tache" *ngIf="selectedAgentDetails.tacheEnCours">
+                    <div class="tache-label">
+                        <i class="pi"
+                           [ngClass]="selectedAgentDetails.statut === 'EN_MISSION' ? 'pi-play-circle' : 'pi-calendar-clock'"></i>
+                        <strong>
+                            {{ selectedAgentDetails.statut === 'EN_MISSION' ? 'En cours' : 'Au programme' }} :
+                        </strong>
+                    </div>
+                    <div class="tache-titre">{{ selectedAgentDetails.tacheEnCours }}</div>
+                    <div class="tache-periode" *ngIf="selectedAgentDetails.periodeActuelle">
+                        📅 {{ selectedAgentDetails.periodeActuelle }}
+                    </div>
+                </div>
+
+                <div class="agent-details-activites">
+                    <h4>Activités de la période</h4>
+                    <div *ngIf="!selectedAgentDetails.activites?.length" class="empty-state-mini">
+                        <i class="pi pi-inbox"></i>
+                        <p>Aucune activité sur cette période</p>
+                    </div>
+                    <table class="data-table" *ngIf="selectedAgentDetails.activites?.length">
+                        <thead>
+                        <tr>
+                            <th>Titre</th>
+                            <th>Début</th>
+                            <th>Fin</th>
+                            <th class="col-center">Jours</th>
+                            <th class="col-center">Type</th>
+                            <th class="col-center">Statut</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr *ngFor="let a of selectedAgentDetails.activites">
+                            <td><strong>{{ a.titre }}</strong></td>
+                            <td>{{ a.dateDebut | date:'dd/MM/yyyy' }}</td>
+                            <td>{{ a.dateFin | date:'dd/MM/yyyy' }}</td>
+                            <td class="col-center"><span class="badge-jours">{{ a.nombreJours }}j</span></td>
+                            <td class="col-center">
+                                <span class="badge-type-lieu-detail"
+                                      [ngClass]="a.typeLieu === 'RESIDENT' ? 'badge-resident' : 'badge-non-resident'">
+                                    {{ a.typeLieu === 'RESIDENT' ? '🏠' : '🚗' }}
+                                </span>
+                            </td>
+                            <td class="col-center">
+                                <span class="badge-statut" [ngClass]="'statut-' + (a.statut | lowercase)">
+                                    {{ getStatutLabel(a.statut || '') }}
+                                </span>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="icon-btn-close"
+                        (click)="closeAgentDetailsModal()"
+                        title="Fermer">
+                    <i class="pi pi-times"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL HISTORIQUE AGENT -->
+    <div class="modal-overlay" *ngIf="showHistoriqueModal" (click)="closeHistoriqueModal()">
+        <div class="modal-content modal-large" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+                <div>
+                    <h2>📋 Historique des activités</h2>
+                    <p class="modal-subtitle">
+                        {{ historiqueAgentNom }} — {{ getPeriodeLibelle() }}
+                    </p>
+                </div>
+                <button class="close-btn" (click)="closeHistoriqueModal()">×</button>
+            </div>
+
+            <div class="modal-body">
+                <div *ngIf="isLoadingHistorique" class="loading-container">
+                    <div class="spinner"></div>
+                    <p>Chargement...</p>
+                </div>
+
+                <ng-container *ngIf="!isLoadingHistorique && historiqueAgent">
+                    <div class="historique-kpis">
+                        <!-- ✅ Total missions -->
+                        <div class="h-kpi">
+                            <span class="h-val">{{ historiqueAgent.missionsTotal || 0 }}</span>
+                            <span class="h-lab">Missions total</span>
+                        </div>
+                        <div class="h-kpi h-kpi-resident">
+                            <span class="h-val">{{ historiqueAgent.missionsResident || 0 }}</span>
+                            <span class="h-lab">🏠 Résident</span>
+                        </div>
+                        <div class="h-kpi h-kpi-non-resident">
+                            <span class="h-val">{{ historiqueAgent.missionsNonResident || 0 }}</span>
+                            <span class="h-lab">🚗 Non résident</span>
+                        </div>
+                        <div class="h-kpi">
+                            <span class="h-val">{{ historiqueAgent.joursMission }}j</span>
+                            <span class="h-lab">Jours mission</span>
+                        </div>
+                        <div class="h-kpi">
+                            <span class="h-val">{{ historiqueAgent.missionsProgramme || 0 }}</span>
+                            <span class="h-lab">📋 Programme</span>
+                        </div>
+                        <div class="h-kpi">
+                            <span class="h-val">{{ historiqueAgent.tauxOccupation }}%</span>
+                            <span class="h-lab">Taux occupation</span>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                            <tr>
+                                <th>Titre</th>
+                                <th>Début</th>
+                                <th>Fin</th>
+                                <th class="col-center">Jours</th>
+                                <th>Lieu</th>
+                                <th>Zone</th>
+                                <th>Financement</th>
+                                <th class="col-center">Type</th>
+                                <th class="col-center">Statut</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr *ngFor="let a of historiqueAgent.activites">
+                                <td><strong>{{ a.titre }}</strong></td>
+                                <td>{{ a.dateDebut | date:'dd/MM/yyyy' }}</td>
+                                <td>{{ a.dateFin | date:'dd/MM/yyyy' }}</td>
+                                <td class="col-center">
+                                    <span class="badge-jours">{{ a.nombreJours }}j</span>
+                                </td>
+                                <td>{{ a.lieu || '-' }}</td>
+                                <td>{{ a.zone || '-' }}</td>
+                                <td>{{ a.sourceFinancement || '-' }}</td>
+                                <td class="col-center">
+                                    <span class="badge-type-lieu-detail"
+                                          [ngClass]="a.typeLieu === 'RESIDENT' ? 'badge-resident' : 'badge-non-resident'">
+                                        {{ a.typeLieu === 'RESIDENT' ? '🏠' : '🚗' }}
+                                    </span>
+                                </td>
+                                <td class="col-center">
+                                    <span class="badge-statut" [ngClass]="'statut-' + (a.statut | lowercase)">
+                                        {{ getStatutLabel(a.statut || '') }}
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr *ngIf="!historiqueAgent.activites?.length">
+                                <td colspan="9" class="empty-row">
+                                    <div class="empty-state">
+                                        <i class="pi pi-inbox empty-icon"></i>
+                                        <p>Aucune activité sur cette période</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </ng-container>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="icon-btn-close"
+                        (click)="closeHistoriqueModal()"
+                        title="Fermer">
+                    <i class="pi pi-times"></i>
+                </button>
+                <button type="button" class="icon-btn-save"
+                        [disabled]="!historiqueAgent"
+                        (click)="imprimerHistorique()"
+                        title="Imprimer">
+                    <i class="pi pi-print"></i>
+                </button>
+            </div>
+        </div>
     </div>
 </div>

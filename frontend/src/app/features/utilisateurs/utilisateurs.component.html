@@ -91,7 +91,7 @@
                     <th class="col-num">N°</th>
                     <th>Username</th>
                     <th>Email</th>
-                    <th>Profil</th>
+                    <th>Profils</th>
                     <th>Agent lié</th>
                     <th class="col-statut">Statut</th>
                     <th class="col-actions">Actions</th>
@@ -103,9 +103,15 @@
                     <td><strong>{{ user.username }}</strong></td>
                     <td>{{ user.email || '-' }}</td>
                     <td>
-                        <span class="badge" [ngClass]="getProfilBadgeClass(user.profilCode)">
-                            {{ user.profilLibelle || user.profilCode }}
-                        </span>
+                        <!-- ✅ Affiche TOUS les profils -->
+                        <div class="profils-cell">
+                            <span *ngFor="let code of user.profilCodes; let idx = index"
+                                  class="badge"
+                                  [ngClass]="getProfilBadgeClass(code)">
+                                {{ user.profilLibelles?.[idx] || code }}
+                            </span>
+                            <span *ngIf="!user.profilCodes?.length" class="text-muted">-</span>
+                        </div>
                     </td>
                     <td>{{ user.agentNom || '-' }}</td>
                     <td class="col-statut">
@@ -213,21 +219,41 @@
                     </div>
                 </div>
 
+                <!-- ============================================================ -->
+                <!-- ✅ SECTION PROFILS MULTIPLES                                  -->
+                <!-- ============================================================ -->
                 <div class="form-section">
                     <h3 class="form-section-title">
-                        <i class="pi pi-id-card"></i> Profil
+                        <i class="pi pi-id-card"></i> Profils
+                        <span class="required">*</span>
+                        <span class="selected-count">
+                            ({{ formData.profilIds?.length || 0 }} sélectionné(s))
+                        </span>
                     </h3>
+                    <p class="form-hint">
+                        Sélectionnez un ou plusieurs profils pour cet utilisateur.
+                    </p>
 
-                    <div class="form-group">
-                        <label class="form-label">
-                            Profil <span class="required">*</span>
-                        </label>
-                        <select [(ngModel)]="formData.profilId" class="form-control">
-                            <option value="">-- Sélectionner un profil --</option>
-                            <option *ngFor="let p of profils" [value]="p.id">
-                                {{ p.libelle }} ({{ p.code }})
-                            </option>
-                        </select>
+                    <div class="profils-grid">
+                        <div *ngFor="let p of profils"
+                             class="profil-checkbox"
+                             [class.selected]="isProfilSelected(p.id!)"
+                             (click)="toggleProfil(p.id!)">
+                            <label>
+                                <input type="checkbox"
+                                       [checked]="isProfilSelected(p.id!)"
+                                       (change)="toggleProfil(p.id!)">
+                                <div class="profil-info">
+                                    <span class="profil-libelle">{{ p.libelle }}</span>
+                                    <span class="profil-code">{{ p.code }}</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div *ngIf="formData.profilIds?.length === 0" class="form-error">
+                        <i class="pi pi-exclamation-triangle"></i>
+                        Veuillez sélectionner au moins un profil.
                     </div>
                 </div>
 
@@ -275,7 +301,7 @@
                     <i class="pi pi-times"></i>
                 </button>
                 <button type="button" class="icon-btn-save"
-                        [disabled]="isLoading || !formData.username || !formData.profilId || !formData.agentId"
+                        [disabled]="isLoading || !formData.username || !formData.profilIds?.length || !formData.agentId"
                         (click)="saveUtilisateur()"
                         [title]="editingUtilisateur ? 'Modifier' : 'Créer'">
                     <i class="pi" [ngClass]="isLoading ? 'pi-spin pi-spinner' : 'pi-check'"></i>
@@ -306,11 +332,15 @@
                     <span class="detail-value">{{ selectedUtilisateur.email || '-' }}</span>
                 </div>
                 <div class="detail-row">
-                    <span class="detail-label">Profil :</span>
+                    <span class="detail-label">Profils :</span>
                     <span class="detail-value">
-                        <span class="badge" [ngClass]="getProfilBadgeClass(selectedUtilisateur.profilCode)">
-                            {{ selectedUtilisateur.profilLibelle }}
+                        <span *ngFor="let code of selectedUtilisateur.profilCodes; let idx = index"
+                              class="badge"
+                              [ngClass]="getProfilBadgeClass(code)"
+                              style="margin-right: 4px;">
+                            {{ selectedUtilisateur.profilLibelles?.[idx] || code }}
                         </span>
+                        <span *ngIf="!selectedUtilisateur.profilCodes?.length" class="text-muted">-</span>
                     </span>
                 </div>
                 <div class="detail-row">

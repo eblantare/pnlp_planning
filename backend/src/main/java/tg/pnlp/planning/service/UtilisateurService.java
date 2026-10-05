@@ -18,8 +18,7 @@ import tg.pnlp.planning.repository.ProfilRepository;
 import tg.pnlp.planning.repository.UtilisateurRepository;
 import tg.pnlp.planning.util.PasswordValidator;
 
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -48,22 +47,21 @@ public class UtilisateurService {
     public UtilisateurDTO createUtilisateur(CreateUtilisateurRequest request) {
         // ✅ Valider le mot de passe
         PasswordValidator.valider(request.getPassword());
+
         // Vérifier l'unicité du username
         if (utilisateurRepository.existsByUsername(request.getUsername())) {
             throw new BusinessException("Ce nom d'utilisateur est déjà utilisé");
         }
 
         // Vérifier l'unicité de l'email
-        if (request.getEmail() != null &&
-                utilisateurRepository.existsByEmail(request.getEmail())) {
+        if (request.getEmail() != null && utilisateurRepository.existsByEmail(request.getEmail())) {
             throw new BusinessException("Cet email est déjà utilisé");
         }
 
-        // Vérifier que le profil existe
-        Profil profil = profilRepository.findById(request.getProfilId())
-                .orElseThrow(() -> new ResourceNotFoundException("Profil non trouvé"));
+        // ✅ Vérifier que la liste de profils est valide
+        Set<Profil> profils = chargerProfils(request.getProfilIds());
 
-        // ✅ Vérifier que l'agent existe (maintenant obligatoire)
+        // Vérifier que l'agent existe
         Agent agent = agentRepository.findById(request.getAgentId())
                 .orElseThrow(() -> new ResourceNotFoundException("Agent non trouvé avec l'id: " + request.getAgentId()));
 
@@ -76,14 +74,14 @@ public class UtilisateurService {
                 .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .email(request.getEmail())
-                .profil(profil)
+                .profils(profils)                     // ✅ Liste de profils
                 .agent(agent)
-                .actif(false)   // ✅ Inactif par défaut
+                .actif(false)
                 .build();
 
         user = utilisateurRepository.save(user);
-        log.info("Utilisateur créé: {} (Agent: {} {})",
-                user.getUsername(), agent.getPrenom(), agent.getNom());
+        log.info("Utilisateur créé: {} ({} profils, Agent: {} {})",
+                user.getUsername(), profils.size(), agent.getPrenom(), agent.getNom());
         return convertToDTO(user);
     }
 
@@ -92,11 +90,12 @@ public class UtilisateurService {
         Utilisateur user = utilisateurRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé: " + id));
 
-        // ✅ Valider le mot de passe s'il est modifié
+        // Mise à jour du mot de passe
         if (request.getPassword() != null && !request.getPassword().isEmpty()) {
             PasswordValidator.valider(request.getPassword());
             user.setPassword(passwordEncoder.encode(request.getPassword()));
         }
+
         // Mise à jour de l'email
         if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
             if (utilisateurRepository.existsByEmailAndIdNot(request.getEmail(), id)) {
@@ -105,24 +104,18 @@ public class UtilisateurService {
             user.setEmail(request.getEmail());
         }
 
-        // Mise à jour du mot de passe
-        if (request.getPassword() != null && !request.getPassword().isEmpty()) {
-            user.setPassword(passwordEncoder.encode(request.getPassword()));
+        // ✅ Mise à jour de la liste de profils
+        if (request.getProfilIds() != null && !request.getProfilIds().isEmpty()) {
+            Set<Profil> profils = chargerProfils(request.getProfilIds());
+            user.getProfils().clear();
+            user.getProfils().addAll(profils);
         }
 
-        // Mise à jour du profil
-        if (request.getProfilId() != null) {
-            Profil profil = profilRepository.findById(request.getProfilId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Profil non trouvé"));
-            user.setProfil(profil);
-        }
-
-        // Mise à jour de l'agent (maintenant obligatoire)
+        // Mise à jour de l'agent
         if (request.getAgentId() != null) {
             Agent agent = agentRepository.findById(request.getAgentId())
                     .orElseThrow(() -> new ResourceNotFoundException("Agent non trouvé"));
 
-            // Vérifier qu'aucun autre utilisateur n'est lié à cet agent
             if (!agent.getId().equals(user.getAgent() != null ? user.getAgent().getId() : null) &&
                     utilisateurRepository.existsByAgentId(request.getAgentId())) {
                 throw new BusinessException("Un autre utilisateur est déjà associé à cet agent");
@@ -137,8 +130,25 @@ public class UtilisateurService {
         }
 
         user = utilisateurRepository.save(user);
-        log.info("Utilisateur modifié: {}", user.getUsername());
+        log.info("Utilisateur modifié: {} ({} profils)", user.getUsername(), user.getProfils().size());
         return convertToDTO(user);
+    }
+
+    /**
+     * ✅ Charge la liste des profils à partir des IDs.
+     * Vérifie que TOUS les profils existent.
+     */
+    private Set<Profil> chargerProfils(List<UUID> profilIds) {
+        if (profilIds == null || profilIds.isEmpty()) {
+            throw new BusinessException("Au moins un profil doit être sélectionné");
+        }
+
+        List<Profil> profils = profilRepository.findAllById(profilIds);
+        if (profils.size() != profilIds.size()) {
+            throw new BusinessException("Un ou plusieurs profils sont introuvables");
+        }
+
+        return new HashSet<>(profils);
     }
 
     @Transactional
@@ -146,32 +156,10 @@ public class UtilisateurService {
         Utilisateur user = utilisateurRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé: " + id));
 
-        utilisateurRepository.delete(user);   // ✅ Suppression réelle
+        utilisateurRepository.delete(user);
         log.info("Utilisateur supprimé définitivement: {}", user.getUsername());
     }
 
-    private UtilisateurDTO convertToDTO(Utilisateur user) {
-        UtilisateurDTO.UtilisateurDTOBuilder builder = UtilisateurDTO.builder()
-                .id(user.getId())
-                .username(user.getUsername())
-                .email(user.getEmail())
-                .actif(user.getActif())
-                .derniereConnexion(user.getDerniereConnexion())
-                .createdAt(user.getCreatedAt());
-
-        if (user.getProfil() != null) {
-            builder.profilId(user.getProfil().getId())
-                    .profilCode(user.getProfil().getCode())
-                    .profilLibelle(user.getProfil().getLibelle());
-        }
-
-        if (user.getAgent() != null) {
-            builder.agentId(user.getAgent().getId())
-                    .agentNom(user.getAgent().getNomComplet());
-        }
-
-        return builder.build();
-    }
     @Transactional
     public UtilisateurDTO changerStatut(UUID id, Boolean actif) {
         Utilisateur user = utilisateurRepository.findById(id)
@@ -179,5 +167,42 @@ public class UtilisateurService {
         user.setActif(actif);
         user = utilisateurRepository.save(user);
         return convertToDTO(user);
+    }
+
+    /**
+     * ✅ Convertit l'entité en DTO avec la liste complète des profils.
+     */
+    private UtilisateurDTO convertToDTO(Utilisateur user) {
+        List<UUID> profilIds = new ArrayList<>();
+        List<String> profilCodes = new ArrayList<>();
+        List<String> profilLibelles = new ArrayList<>();
+
+        if (user.getProfils() != null) {
+            user.getProfils().stream()
+                    .sorted(Comparator.comparing(Profil::getCode))
+                    .forEach(p -> {
+                        profilIds.add(p.getId());
+                        profilCodes.add(p.getCode());
+                        profilLibelles.add(p.getLibelle());
+                    });
+        }
+
+        UtilisateurDTO.UtilisateurDTOBuilder builder = UtilisateurDTO.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .profilIds(profilIds)               // ✅ Nouveau
+                .profilCodes(profilCodes)           // ✅ Nouveau
+                .profilLibelles(profilLibelles)     // ✅ Nouveau
+                .actif(user.getActif())
+                .derniereConnexion(user.getDerniereConnexion())
+                .createdAt(user.getCreatedAt());
+
+        if (user.getAgent() != null) {
+            builder.agentId(user.getAgent().getId())
+                    .agentNom(user.getAgent().getNomComplet());
+        }
+
+        return builder.build();
     }
 }

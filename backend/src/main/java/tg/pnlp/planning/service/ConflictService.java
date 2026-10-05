@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import tg.pnlp.planning.dto.ConflitDTO;
+import tg.pnlp.planning.entity.Activite;
 import tg.pnlp.planning.entity.Agent;
 import tg.pnlp.planning.entity.Affectation;
 import tg.pnlp.planning.entity.Indisponibilite;
@@ -23,66 +24,49 @@ public class ConflictService {
     private final AffectationRepository affectationRepository;
     private final IndisponibiliteRepository indisponibiliteRepository;
 
-    /**
-     * Vérifie si un agent est disponible pour une période donnée.
-     *
-     * @param agentId          ID de l'agent
-     * @param debut            Date de début de la période
-     * @param fin              Date de fin de la période
-     * @param activiteIdExclue ID de l'activité à exclure de la vérification (null si aucune)
-     * @return true si l'agent est disponible, false sinon
-     */
-    public boolean estDisponible(UUID agentId, LocalDate debut, LocalDate fin, UUID activiteIdExclue) {
-        // 1. Vérifier les indisponibilités
-        List<Indisponibilite> indisponibilites = indisponibiliteRepository
-                .findByAgentIdAndDateDebutLessThanEqualAndDateFinGreaterThanEqual(
-                        agentId, fin, debut);
+    public boolean estDisponible(UUID agentId, LocalDate debut, LocalDate fin, UUID activiteAExclure) {
 
-        if (!indisponibilites.isEmpty()) {
-            log.warn("Agent {} indisponible du {} au {} ({} indisponibilité(s))",
-                    agentId, debut, fin, indisponibilites.size());
+        // 1. Indisponibilités
+        List<Indisponibilite> indispos = indisponibiliteRepository
+                .findByAgentIdAndDateDebutLessThanEqualAndDateFinGreaterThanEqual(agentId, fin, debut);
+        if (!indispos.isEmpty()) {
             return false;
         }
 
-        // 2. Vérifier les affectations existantes EN EXCLUANT l'activité courante
-        List<Affectation> affectations;
-        if (activiteIdExclue != null) {
-            // ✅ Utilise la requête avec exclusion pour éviter les faux positifs
-            affectations = affectationRepository.findByAgentIdExcludingActivite(
-                    agentId, activiteIdExclue, fin, debut);
+        // 2. Affectations actives chevauchantes
+        List<Affectation> affectations = affectationRepository.findByAgentId(agentId);
+        for (Affectation aff : affectations) {
+            if (activiteAExclure != null && aff.getActivite().getId().equals(activiteAExclure)) {
+                continue;
+            }
 
-            log.debug("Vérification conflit agent {} (exclusion activité {}): {} affectation(s)",
-                    agentId, activiteIdExclue, affectations.size());
-        } else {
-            affectations = affectationRepository
-                    .findByAgentIdAndActiviteDateDebutLessThanEqualAndActiviteDateFinGreaterThanEqual(
-                            agentId, fin, debut);
+            Activite activite = aff.getActivite();
+            Activite.StatutActivite statut = activite.getStatut();
 
-            log.debug("Vérification conflit agent {} (sans exclusion): {} affectation(s)",
-                    agentId, affectations.size());
-        }
+            if (statut == Activite.StatutActivite.BROUILLON
+                    || statut == Activite.StatutActivite.ANNULEE
+                    || statut == Activite.StatutActivite.TERMINEE
+                    || statut == Activite.StatutActivite.REPORTEE) {
+                continue;
+            }
 
-        if (!affectations.isEmpty()) {
-            log.warn("Agent {} a déjà {} affectation(s) sur la période du {} au {}",
-                    agentId, affectations.size(), debut, fin);
-            return false;
+            boolean chevauche = !activite.getDateFin().isBefore(debut)
+                    && !activite.getDateDebut().isAfter(fin);
+            if (chevauche) {
+                return false;
+            }
         }
 
         return true;
     }
 
-    /**
-     * Détecte tous les conflits pour une activité donnée
-     */
     public List<ConflitDTO> detecterConflits(UUID activiteId, LocalDate debut, LocalDate fin) {
         List<ConflitDTO> conflits = new ArrayList<>();
-
         List<Affectation> affectations = affectationRepository.findByActiviteId(activiteId);
 
         for (Affectation affectation : affectations) {
             Agent agent = affectation.getAgent();
 
-            // Vérifier les indisponibilités
             List<Indisponibilite> indisponibilites = indisponibiliteRepository
                     .findByAgentIdAndDateDebutLessThanEqualAndDateFinGreaterThanEqual(
                             agent.getId(), fin, debut);
@@ -98,7 +82,6 @@ public class ConflictService {
                         .build());
             }
 
-            // Vérifier les autres affectations (exclure l'activité courante)
             List<Affectation> autresAffectations = affectationRepository
                     .findByAgentIdExcludingActivite(agent.getId(), activiteId, fin, debut);
 

@@ -70,18 +70,69 @@
 }
 
 /* ============================================================
-   SÉLECTEUR DE PÉRIODE
+   SÉLECTEUR DE PÉRIODE (CORRIGÉ — structure verticale claire)
    ============================================================ */
 .period-selector {
     display: flex;
-    align-items: center;
-    justify-content: center;
+    flex-direction: column;
     gap: 12px;
     background: white;
     border-radius: 12px;
-    padding: 16px 24px;
+    padding: 16px 20px;
     margin-bottom: 20px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+/* Onglets Semaine / Mois / Année / Intervalle */
+.period-mode-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    background: #F3F4F6;
+    padding: 4px;
+    border-radius: 10px;
+}
+
+.mode-tab {
+    padding: 10px 16px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: #6B7280;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.mode-tab i {
+    font-size: 13px;
+}
+
+.mode-tab:hover {
+    background: #E5E7EB;
+    color: #1B5E20;
+}
+
+.mode-tab.active {
+    background: white;
+    color: #1B5E20;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    font-weight: 700;
+}
+
+/* Contrôles (flèches, dates, etc.) */
+.period-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    min-height: 40px;
 }
 
 .period-nav-btn {
@@ -124,8 +175,55 @@
     font-weight: 500;
 }
 
+.period-display-small {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1B5E20;
+    min-width: 180px;
+    text-align: center;
+}
+
+.date-label {
+    font-size: 12px;
+    color: #6B7280;
+    font-weight: 600;
+}
+
+.date-input {
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: inherit;
+}
+
+.date-input:focus {
+    outline: none;
+    border-color: #1B5E20;
+    box-shadow: 0 0 0 3px rgba(27, 94, 32, 0.08);
+}
+
+.btn-apply {
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-apply:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(27, 94, 32, 0.3);
+}
+
 /* ============================================================
-   KPIs — sur une seule ligne (avec scroll horizontal)
+   KPIs
    ============================================================ */
 .kpi-grid {
     display: flex;
@@ -137,23 +235,10 @@
     scroll-behavior: smooth;
 }
 
-.kpi-grid::-webkit-scrollbar {
-    height: 6px;
-}
-
-.kpi-grid::-webkit-scrollbar-track {
-    background: #F3F4F6;
-    border-radius: 3px;
-}
-
-.kpi-grid::-webkit-scrollbar-thumb {
-    background: #BDBDBD;
-    border-radius: 3px;
-}
-
-.kpi-grid::-webkit-scrollbar-thumb:hover {
-    background: #9CA3AF;
-}
+.kpi-grid::-webkit-scrollbar { height: 6px; }
+.kpi-grid::-webkit-scrollbar-track { background: #F3F4F6; border-radius: 3px; }
+.kpi-grid::-webkit-scrollbar-thumb { background: #BDBDBD; border-radius: 3px; }
+.kpi-grid::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
 
 .kpi-card {
     flex: 0 0 210px;
@@ -215,22 +300,16 @@
     text-overflow: ellipsis;
 }
 
-/* Couleurs */
 .kpi-green { background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%); border-left: 4px solid #2E7D32; }
 .kpi-green .kpi-value { color: #2E7D32; }
-
 .kpi-blue { background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%); border-left: 4px solid #1565C0; }
 .kpi-blue .kpi-value { color: #1565C0; }
-
 .kpi-orange { background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%); border-left: 4px solid #E65100; }
 .kpi-orange .kpi-value { color: #E65100; }
-
 .kpi-purple { background: linear-gradient(135deg, #F3E5F5 0%, #E1BEE7 100%); border-left: 4px solid #6A1B9A; }
 .kpi-purple .kpi-value { color: #6A1B9A; }
-
 .kpi-teal { background: linear-gradient(135deg, #E0F2F1 0%, #B2DFDB 100%); border-left: 4px solid #00695C; }
 .kpi-teal .kpi-value { color: #00695C; }
-
 .kpi-red { background: linear-gradient(135deg, #FFEBEE 0%, #FFCDD2 100%); border-left: 4px solid #C62828; }
 .kpi-red .kpi-value { color: #C62828; }
 
@@ -264,9 +343,7 @@
     gap: 8px;
 }
 
-.section-header h2 i {
-    color: #2E7D32;
-}
+.section-header h2 i { color: #2E7D32; }
 
 .section-subtitle {
     color: #6B7280;
@@ -275,7 +352,7 @@
 }
 
 /* ============================================================
-   CARTES DES AGENTS AVEC SCROLL HORIZONTAL
+   CARTES DES AGENTS
    ============================================================ */
 .agents-cards-scroll {
     display: flex;
@@ -286,23 +363,9 @@
     scroll-behavior: smooth;
 }
 
-.agents-cards-scroll::-webkit-scrollbar {
-    height: 8px;
-}
-
-.agents-cards-scroll::-webkit-scrollbar-track {
-    background: #F3F4F6;
-    border-radius: 4px;
-}
-
-.agents-cards-scroll::-webkit-scrollbar-thumb {
-    background: #BDBDBD;
-    border-radius: 4px;
-}
-
-.agents-cards-scroll::-webkit-scrollbar-thumb:hover {
-    background: #9CA3AF;
-}
+.agents-cards-scroll::-webkit-scrollbar { height: 8px; }
+.agents-cards-scroll::-webkit-scrollbar-track { background: #F3F4F6; border-radius: 4px; }
+.agents-cards-scroll::-webkit-scrollbar-thumb { background: #BDBDBD; border-radius: 4px; }
 
 .agent-status-card {
     flex: 0 0 260px;
@@ -396,25 +459,10 @@
     margin-top: 2px;
 }
 
-.agent-status-badge.badge-en-mission {
-    background: #FEF3C7;
-    color: #92400E;
-}
-
-.agent-status-badge.badge-occupe {
-    background: #EDE9FE;
-    color: #6D28D9;
-}
-
-.agent-status-badge.badge-disponible {
-    background: #DCFCE7;
-    color: #15803D;
-}
-
-.agent-status-badge.badge-inactif {
-    background: #F3F4F6;
-    color: #6B7280;
-}
+.agent-status-badge.badge-en-mission { background: #FEF3C7; color: #92400E; }
+.agent-status-badge.badge-occupe { background: #EDE9FE; color: #6D28D9; }
+.agent-status-badge.badge-disponible { background: #DCFCE7; color: #15803D; }
+.agent-status-badge.badge-inactif { background: #F3F4F6; color: #6B7280; }
 
 .agent-status-stats {
     display: flex;
@@ -442,16 +490,20 @@
 }
 
 /* ============================================================
-   GRAPHIQUE TAUX D'OCCUPATION PAR AGENT
+   GRAPHIQUE TAUX D'OCCUPATION
    ============================================================ */
 .occupation-chart {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    padding: 8px 0;
+    padding: 16px 0 0 0;
     max-height: 500px;
     overflow-y: auto;
 }
+
+.occupation-chart::-webkit-scrollbar { width: 8px; }
+.occupation-chart::-webkit-scrollbar-track { background: #F3F4F6; border-radius: 4px; }
+.occupation-chart::-webkit-scrollbar-thumb { background: #BDBDBD; border-radius: 4px; }
 
 .occupation-row {
     display: grid;
@@ -514,9 +566,7 @@
 /* ============================================================
    GRAPHIQUE RÉPARTITION MENSUELLE
    ============================================================ */
-.chart-container {
-    padding: 20px 0 0 0;
-}
+.chart-container { padding: 16px 0 0 0; }
 
 .chart-bars {
     display: flex;
@@ -646,63 +696,6 @@
 /* ============================================================
    TABLEAU
    ============================================================ */
-.table-card {
-    background: white;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-}
-
-.table-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 14px 20px;
-    border-bottom: 1px solid #F3F4F6;
-    background: #FAFBFC;
-    flex-wrap: wrap;
-    gap: 12px;
-}
-
-.table-header-left { display: flex; align-items: center; gap: 12px; }
-
-.table-header-right {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.page-size-label { font-size: 12px; color: #666; }
-
-.page-size {
-    padding: 6px 10px;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    font-size: 13px;
-    cursor: pointer;
-    background: white;
-}
-
-.table-title {
-    font-size: 15px;
-    font-weight: 600;
-    color: #333;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.table-title i { color: #1B5E20; }
-
-.table-count {
-    background: #E8F5E9;
-    color: #1B5E20;
-    padding: 3px 10px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 600;
-}
-
 .table-responsive { overflow-x: auto; }
 
 .data-table {
@@ -737,6 +730,13 @@
 
 .col-num { width: 50px; text-align: center; color: #9CA3AF; font-weight: 600; }
 .col-center { text-align: center; }
+
+/* Tableau détail : on laisse de la place aux autres colonnes */
+.detail-table .col-num { width: 40px; }
+.detail-table th:nth-child(2),
+.detail-table td:nth-child(2) { min-width: 180px; }  /* Agent */
+.detail-table th:nth-child(3),
+.detail-table td:nth-child(3) { min-width: 150px; }  /* Poste */
 
 .agent-cell {
     display: flex;
@@ -798,38 +798,10 @@
     letter-spacing: 0.3px;
 }
 
-/* Statuts dans le tableau */
 .statut-en-mission { background: #FFF3E0; color: #E65100; }
-.statut-occupe { background: #EDE9FE; color: #6D28D9; }         /* ✅ NOUVEAU */
+.statut-occupe { background: #EDE9FE; color: #6D28D9; }
 .statut-disponible { background: #E8F5E9; color: #2E7D32; }
 .statut-inactif { background: #F3F4F6; color: #6B7280; }
-
-.taux-container {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 120px;
-}
-
-.taux-bar {
-    flex: 1;
-    height: 8px;
-    background: #E5E7EB;
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-.taux-bar-fill {
-    height: 100%;
-    transition: all 0.3s ease;
-}
-
-.taux-value {
-    font-size: 12px;
-    font-weight: 700;
-    min-width: 45px;
-    text-align: right;
-}
 
 .activite-cell {
     display: flex;
@@ -850,6 +822,30 @@
 }
 
 .text-muted { color: #9CA3AF; }
+
+/* ============================================================
+   BOUTON HISTORIQUE
+   ============================================================ */
+.btn-historique {
+    padding: 5px 10px;
+    background: #E3F2FD;
+    color: #1565C0;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.btn-historique:hover {
+    background: #BBDEFB;
+    transform: translateY(-1px);
+}
 
 /* ============================================================
    PAGINATION
@@ -957,29 +953,6 @@
 }
 
 /* ============================================================
-   RESPONSIVE
-   ============================================================ */
-@media (max-width: 1400px) {
-    .kpi-grid { grid-template-columns: repeat(3, 1fr); }
-}
-
-@media (max-width: 1200px) {
-    .filters-grid-2 { grid-template-columns: 1fr; }
-    .occupation-row { grid-template-columns: 150px 1fr 60px; }
-}
-
-@media (max-width: 768px) {
-    .page-container { padding: 14px; }
-    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-    .chart-bars { height: 150px; }
-    .chart-value { font-size: 10px; }
-    .chart-label { font-size: 9px; }
-    .page-header { flex-direction: column; align-items: stretch; }
-    .header-actions { justify-content: flex-end; }
-    .occupation-row { grid-template-columns: 120px 1fr 55px; }
-}
-
-/* ============================================================
    ACCORDÉON
    ============================================================ */
 .accordion-card {
@@ -997,9 +970,7 @@
     user-select: none;
 }
 
-.accordion-header:hover {
-    background: #FAFBFC;
-}
+.accordion-header:hover { background: #FAFBFC; }
 
 .accordion-title {
     display: flex;
@@ -1017,9 +988,7 @@
     gap: 8px;
 }
 
-.accordion-title h2 i {
-    color: #2E7D32;
-}
+.accordion-title h2 i { color: #2E7D32; }
 
 .accordion-icon {
     font-size: 16px;
@@ -1039,114 +1008,769 @@
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* Ajustement du graphique dans l'accordéon */
-.occupation-chart {
+/* ============================================================
+   GRAPHIQUE FINANCEMENT
+   ============================================================ */
+.financement-chart {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 14px;
     padding: 16px 0 0 0;
-    max-height: 500px;
-    overflow-y: auto;
 }
 
-.occupation-chart::-webkit-scrollbar {
-    width: 8px;
-}
-
-.occupation-chart::-webkit-scrollbar-track {
-    background: #F3F4F6;
-    border-radius: 4px;
-}
-
-.occupation-chart::-webkit-scrollbar-thumb {
-    background: #BDBDBD;
-    border-radius: 4px;
-}
-
-.occupation-chart::-webkit-scrollbar-thumb:hover {
-    background: #9CA3AF;
-}
-
-.occupation-row {
+.financement-row {
     display: grid;
-    grid-template-columns: 200px 1fr 70px;
+    grid-template-columns: 160px 1fr 220px;
+    gap: 12px;
     align-items: center;
+    cursor: help;
+}
+
+.financement-source {
+    font-weight: 600;
+    color: #333;
+    font-size: 13px;
+}
+
+.financement-nom {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.financement-bar-wrapper {
+    position: relative;
+    height: 24px;
+    background: #F3F4F6;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.financement-bar-realise,
+.financement-bar-restant {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    transition: width 0.4s ease;
+}
+
+.financement-bar-realise {
+    left: 0;
+    background: linear-gradient(135deg, #2E7D32 0%, #66BB6A 100%);
+    z-index: 1;
+}
+
+.financement-bar-restant {
+    background: linear-gradient(135deg, #FFB74D 0%, #FFE0B2 100%);
+    z-index: 0;
+}
+
+.financement-stats {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.fin-realise { color: #2E7D32; }
+.fin-restant { color: #E65100; }
+.fin-total { color: #6B7280; }
+
+.financement-legend {
+    display: flex;
+    gap: 20px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #F3F4F6;
+    font-size: 12px;
+    color: #6B7280;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    display: inline-block;
+}
+
+.legend-realise { background: linear-gradient(135deg, #2E7D32, #66BB6A); }
+.legend-restant { background: linear-gradient(135deg, #FFB74D, #FFE0B2); }
+
+/* ============================================================
+   MODAL HISTORIQUE
+   ============================================================ */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 14px;
+    width: 100%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+
+.modal-large { max-width: 1000px; }
+
+.modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: #1B5E20;
+    font-size: 18px;
+}
+
+.modal-subtitle {
+    color: #888;
+    font-size: 12px;
+    margin-top: 3px;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 26px;
+    color: #999;
+    cursor: pointer;
+}
+
+.close-btn:hover { color: #333; }
+
+.modal-body { padding: 24px; }
+
+.modal-footer {
+    padding: 14px 24px;
+    border-top: 1px solid #eee;
+    display: flex;
+    justify-content: flex-end;
     gap: 12px;
 }
 
-.occupation-agent {
-    display: flex;
+.icon-btn-close,
+.icon-btn-save {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
-    min-width: 0;
+    justify-content: center;
+    font-size: 18px;
+    transition: all 0.2s ease;
+    padding: 0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
-.occupation-avatar {
-    width: 28px;
-    height: 28px;
+.icon-btn-close {
+    background: #F3F4F6;
+    color: #6B7280;
+    border: 1px solid #E5E7EB;
+}
+
+.icon-btn-close:hover { background: #E5E7EB; color: #374151; }
+
+.icon-btn-save {
+    background: linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%);
+    color: white;
+}
+
+.icon-btn-save:hover:not(:disabled) {
+    background: linear-gradient(135deg, #2E7D32 0%, #388E3C 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(27, 94, 32, 0.4);
+}
+
+.icon-btn-save:disabled {
+    background: #D1D5DB;
+    color: #9CA3AF;
+    cursor: not-allowed;
+}
+
+.historique-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.h-kpi {
+    background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%);
+    border-left: 4px solid #2E7D32;
+    padding: 12px 14px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.h-val {
+    font-size: 20px;
+    font-weight: 800;
+    color: #1B5E20;
+    line-height: 1;
+}
+
+.h-lab {
+    font-size: 10px;
+    font-weight: 600;
+    color: #6B7280;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 1200px) {
+    .filters-grid-2 { grid-template-columns: 1fr; }
+    .occupation-row { grid-template-columns: 150px 1fr 60px; }
+}
+
+@media (max-width: 768px) {
+    .page-container { padding: 14px; }
+    .chart-bars { height: 150px; }
+    .chart-value { font-size: 10px; }
+    .chart-label { font-size: 9px; }
+    .page-header { flex-direction: column; align-items: stretch; }
+    .header-actions { justify-content: flex-end; }
+    .occupation-row { grid-template-columns: 120px 1fr 55px; }
+    .historique-kpis { grid-template-columns: repeat(2, 1fr); }
+    .financement-row { grid-template-columns: 1fr; }
+    .period-mode-tabs { grid-template-columns: repeat(2, 1fr); }
+    .period-mode-tabs .mode-tab { font-size: 12px; padding: 8px 10px; }
+}
+/* ============================================================ */
+/* ✅ BADGES TYPE DE LIEU                                        */
+/* ============================================================ */
+.badge-type-lieu-detail {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.badge-type-lieu-detail.badge-resident {
+    background: #E8F5E9;
+    color: #2E7D32;
+}
+
+.badge-type-lieu-detail.badge-non-resident {
+    background: #FFF3E0;
+    color: #E65100;
+}
+
+/* Compteurs dans le tableau détail */
+.badge-resident-count {
+    display: inline-block;
+    background: #E8F5E9;
+    color: #2E7D32;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 12px;
+    min-width: 32px;
+}
+
+.badge-non-resident-count {
+    display: inline-block;
+    background: #FFF3E0;
+    color: #E65100;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 12px;
+    min-width: 32px;
+}
+
+/* KPIs dans le modal historique */
+.h-kpi-resident {
+    background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%) !important;
+    border-left-color: #2E7D32 !important;
+}
+
+.h-kpi-non-resident {
+    background: linear-gradient(135deg, #FFF3E0 0%, #FFE0B2 100%) !important;
+    border-left-color: #E65100 !important;
+}
+
+/* Responsive : historique-kpis passe à 3 colonnes sur tablette */
+@media (max-width: 1200px) {
+    .historique-kpis { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 768px) {
+    .historique-kpis { grid-template-columns: repeat(2, 1fr); }
+}
+/* ============================================================ */
+/* ✅ DÉTAIL JOURS RÉSIDENT / NON_RÉSIDENT dans les cartes       */
+/* ============================================================ */
+.agent-status-detail {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+    font-size: 9px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.agent-status-detail .detail-res {
+    color: #2E7D32;
+}
+
+.agent-status-detail .detail-non-res {
+    color: #E65100;
+}
+
+/* ============================================================ */
+/* ✅ GRAPHIQUE TAUX : barres empilées                           */
+/* ============================================================ */
+
+/* Légende en haut du graphique */
+.occupation-legend {
+    display: flex;
+    gap: 20px;
+    padding: 0 0 12px 0;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #F3F4F6;
+    font-size: 12px;
+    color: #6B7280;
+}
+
+.occupation-legend .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.occupation-legend .legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    display: inline-block;
+}
+
+/* Wrapper empilé */
+.occupation-bar-wrapper.stacked {
+    position: relative;
+    height: 20px;
+    background: #F3F4F6;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+/* Barre RÉSIDENT : vert, à gauche */
+.occupation-bar-resident {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: linear-gradient(135deg, #2E7D32 0%, #66BB6A 100%);
+    border-radius: 10px 0 0 10px;
+    transition: width 0.4s ease;
+    z-index: 1;
+    cursor: help;
+}
+
+/* Barre NON_RÉSIDENT : orange, empilée à droite */
+.occupation-bar-non-resident {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    background: linear-gradient(135deg, #E65100 0%, #FFB74D 100%);
+    border-radius: 0 10px 10px 0;
+    transition: all 0.4s ease;
+    z-index: 0;
+    cursor: help;
+}
+
+/* Bord arrondi si la barre non-résident est seule */
+.occupation-bar-non-resident[style*="left: 0%"] {
+    border-radius: 10px;
+}
+
+/* Bord arrondi si la barre résident est seule (100%) */
+.occupation-bar-resident[style*="width: 100%"] {
+    border-radius: 10px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .occupation-legend {
+        font-size: 11px;
+    }
+}
+/* ============================================================ */
+/* ✅ BARRE DE RECHERCHE DANS "ÉTAT DES AGENTS"                  */
+/* ============================================================ */
+.agents-search-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #F9FAFB;
+    border: 1px solid #E5E7EB;
+    border-radius: 10px;
+    margin-bottom: 16px;
+    transition: all 0.2s;
+}
+
+.agents-search-bar:focus-within {
+    border-color: #1B5E20;
+    box-shadow: 0 0 0 3px rgba(27, 94, 32, 0.08);
+}
+
+.agents-search-bar i.pi-search {
+    color: #9CA3AF;
+    font-size: 14px;
+}
+
+.agents-search-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 13px;
+    color: #333;
+}
+
+.agents-search-input::placeholder {
+    color: #9CA3AF;
+}
+
+.agents-search-clear {
+    background: #E5E7EB;
+    border: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: #6B7280;
+    transition: all 0.15s;
+}
+
+.agents-search-clear:hover {
+    background: #D1D5DB;
+    color: #374151;
+}
+
+.no-agents-found {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: #9CA3AF;
+    min-width: 100%;
+}
+
+.no-agents-found i {
+    font-size: 32px;
+    margin-bottom: 8px;
+    opacity: 0.5;
+}
+
+.no-agents-found p {
+    margin: 0;
+    font-size: 13px;
+}
+
+/* ============================================================ */
+/* ✅ CARTES AGENTS CLIQUABLES + TÂCHE                          */
+/* ============================================================ */
+.agent-status-card {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.agent-status-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+/* Statut "Au programme" */
+.agent-status-card.card-au-programme {
+    border-left-color: #3B82F6;
+    background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+}
+
+.agent-status-badge.badge-au-programme {
+    background: #DBEAFE;
+    color: #1E40AF;
+}
+
+/* Libellé tâche dans la carte */
+.agent-status-tache {
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+    font-size: 10px;
+    color: #6B7280;
+    font-weight: 500;
+    margin-top: 4px;
+    line-height: 1.3;
+    max-width: 100%;
+}
+
+.agent-status-tache i {
+    font-size: 9px;
+    color: #1B5E20;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+/* ============================================================ */
+/* ✅ BARRE DE RECHERCHE "ÉTAT DES AGENTS"                       */
+/* ============================================================ */
+.agents-search-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #F9FAFB;
+    border: 1px solid #E5E7EB;
+    border-radius: 10px;
+    margin-bottom: 16px;
+    transition: all 0.2s;
+}
+
+.agents-search-bar:focus-within {
+    border-color: #1B5E20;
+    box-shadow: 0 0 0 3px rgba(27, 94, 32, 0.08);
+}
+
+.agents-search-bar i.pi-search { color: #9CA3AF; font-size: 14px; }
+
+.agents-search-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 13px;
+    color: #333;
+}
+
+.agents-search-clear {
+    background: #E5E7EB;
+    border: none;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: #6B7280;
+}
+
+.agents-search-clear:hover { background: #D1D5DB; color: #374151; }
+
+.no-agents-found {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: #9CA3AF;
+    min-width: 100%;
+}
+
+.no-agents-found i { font-size: 32px; margin-bottom: 8px; opacity: 0.5; }
+.no-agents-found p { margin: 0; font-size: 13px; }
+
+/* ============================================================ */
+/* ✅ CARTE AGENT CLIQUABLE + TÂCHE                             */
+/* ============================================================ */
+.agent-status-card { cursor: pointer; transition: all 0.2s; }
+.agent-status-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.agent-status-card.card-au-programme {
+    border-left-color: #3B82F6;
+    background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+}
+
+.agent-status-badge.badge-au-programme {
+    background: #DBEAFE;
+    color: #1E40AF;
+}
+
+.statut-au-programme { background: #DBEAFE; color: #1E40AF; }
+
+.agent-status-tache {
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+    font-size: 10px;
+    color: #6B7280;
+    font-weight: 500;
+    margin-top: 4px;
+    line-height: 1.3;
+}
+
+.agent-status-tache i { font-size: 9px; color: #1B5E20; margin-top: 2px; flex-shrink: 0; }
+
+/* ============================================================ */
+/* ✅ MODAL DÉTAILS AGENT                                       */
+/* ============================================================ */
+.agent-details-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%);
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+
+.agent-details-avatar {
+    width: 60px; height: 60px;
     border-radius: 50%;
     background: linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%);
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 10px;
-    font-weight: 700;
+    font-size: 20px;
+    font-weight: 800;
     flex-shrink: 0;
 }
 
-.occupation-name {
-    font-size: 12px;
+.agent-details-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.agent-details-info h3 { margin: 0; color: #1B5E20; font-size: 18px; font-weight: 700; }
+.agent-details-poste { font-size: 12px; color: #6B7280; font-weight: 600; }
+
+.agent-details-kpis {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.agent-detail-kpi {
+    text-align: center;
+    padding: 12px 8px;
+    background: #F9FAFB;
+    border-radius: 10px;
+    border-left: 3px solid #9CA3AF;
+}
+
+.agent-detail-kpi .kpi-val {
+    display: block;
+    font-size: 20px;
+    font-weight: 800;
+    color: #1B5E20;
+    line-height: 1.1;
+    margin-bottom: 4px;
+}
+
+.agent-detail-kpi .kpi-lab {
+    display: block;
+    font-size: 10px;
     font-weight: 600;
-    color: #333;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    color: #6B7280;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
-.occupation-bar-wrapper {
-    height: 20px;
-    background: #F3F4F6;
+.agent-detail-kpi.kpi-res { background: #E8F5E9; border-left-color: #2E7D32; }
+.agent-detail-kpi.kpi-res .kpi-val { color: #2E7D32; }
+.agent-detail-kpi.kpi-non-res { background: #FFF3E0; border-left-color: #E65100; }
+.agent-detail-kpi.kpi-non-res .kpi-val { color: #E65100; }
+
+.agent-details-tache {
+    padding: 14px 16px;
+    background: #EFF6FF;
+    border-left: 4px solid #3B82F6;
     border-radius: 10px;
-    overflow: hidden;
-    position: relative;
+    margin-bottom: 20px;
 }
 
-.occupation-bar {
-    height: 100%;
-    border-radius: 10px;
-    transition: width 0.4s ease;
-    min-width: 2px;
-}
-
-.occupation-value {
+.tache-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #1E40AF;
     font-size: 13px;
-    font-weight: 700;
-    text-align: right;
+    margin-bottom: 6px;
 }
 
-/* Responsive */
-@media (max-width: 1200px) {
-    .occupation-row { grid-template-columns: 150px 1fr 60px; }
+.tache-titre { color: #1F2937; font-size: 14px; font-weight: 600; margin-bottom: 4px; line-height: 1.3; }
+.tache-periode { color: #6B7280; font-size: 12px; }
+
+.agent-details-activites h4 {
+    color: #1B5E20;
+    font-size: 14px;
+    font-weight: 700;
+    margin: 0 0 12px 0;
+    padding-bottom: 6px;
+    border-bottom: 2px solid #E8F5E9;
 }
+
+.empty-state-mini {
+    text-align: center;
+    padding: 24px;
+    color: #9CA3AF;
+}
+
+.empty-state-mini i { font-size: 28px; margin-bottom: 6px; display: block; opacity: 0.5; }
+.empty-state-mini p { margin: 0; font-size: 12px; }
 
 @media (max-width: 768px) {
-    .occupation-row { grid-template-columns: 120px 1fr 55px; }
-    .accordion-header { padding: 14px 16px; }
-    .accordion-content { padding: 0 16px 16px 16px; }
+    .agent-details-kpis { grid-template-columns: repeat(2, 1fr); }
+    .agent-details-header { flex-direction: column; text-align: center; }
+}
+/* ✅ Badge PROGRAMME */
+.badge-programme-count {
+    display: inline-block;
+    background: #EFF6FF;
+    color: #1E40AF;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 12px;
+    min-width: 32px;
 }
 
-/* Pagination dans l'accordéon */
-.accordion-content .pagination-container {
-    margin: 0 -20px -20px -20px;
-    border-radius: 0 0 12px 12px;
+.agent-detail-kpi.kpi-programme {
+    background: #EFF6FF;
+    border-left-color: #3B82F6;
 }
 
-.accordion-content .table-responsive {
-    margin: 0 -20px;
-}
-
-/* Ajustement du graphique dans l'accordéon */
-.accordion-content .chart-container {
-    padding: 16px 0 0 0;
+.agent-detail-kpi.kpi-programme .kpi-val {
+    color: #1E40AF;
 }

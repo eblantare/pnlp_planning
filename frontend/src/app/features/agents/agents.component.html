@@ -5,7 +5,7 @@
             <h1>Gestion du Personnel</h1>
             <p class="subtitle">Gérer les agents du PNLP</p>
         </div>
-        <p-button icon="pi pi-plus"
+        <p-button  *appHasPermission="'crudAgents'" icon="pi pi-plus"
                   [rounded]="true"
                   severity="success"
                   size="large"

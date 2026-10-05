@@ -3,6 +3,7 @@ package tg.pnlp.planning.dto;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -22,8 +23,9 @@ public class CreateUtilisateurRequest {
     @Email(message = "Email invalide")
     private String email;
 
-    @NotNull(message = "Le profil est obligatoire")
-    private UUID profilId;
+    // ✅ NOUVEAU : liste de profils
+    @NotEmpty(message = "Au moins un profil est obligatoire")
+    private List<UUID> profilIds;
 
     @NotNull(message = "L'agent associé est obligatoire")
     private UUID agentId;

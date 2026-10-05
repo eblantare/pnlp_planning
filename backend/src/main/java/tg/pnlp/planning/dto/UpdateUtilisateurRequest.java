@@ -3,6 +3,7 @@ package tg.pnlp.planning.dto;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -16,7 +17,8 @@ public class UpdateUtilisateurRequest {
 
     private String password;
 
-    private UUID profilId;
+    // ✅ NOUVEAU : liste de profils
+    private List<UUID> profilIds;
 
     private UUID agentId;
 

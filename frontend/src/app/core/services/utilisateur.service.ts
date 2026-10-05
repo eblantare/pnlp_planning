@@ -7,9 +7,9 @@ export interface Utilisateur {
     id?: string;
     username: string;
     email?: string;
-    profilId?: string;
-    profilCode?: string;
-    profilLibelle?: string;
+    profilIds?: string[];           // ✅
+    profilCodes?: string[];         // ✅
+    profilLibelles?: string[];      // ✅
     agentId?: string;
     agentNom?: string;
     actif?: boolean;
@@ -21,14 +21,14 @@ export interface CreateUtilisateurRequest {
     username: string;
     password: string;
     email?: string;
-    profilId: string;
+    profilIds: string[];            // ✅
     agentId: string;
 }
 
 export interface UpdateUtilisateurRequest {
     email?: string;
     password?: string;
-    profilId?: string;
+    profilIds?: string[];           // ✅
     agentId?: string;
     actif?: boolean;
 }
@@ -57,12 +57,10 @@ export class UtilisateurService {
         return this.http.put<Utilisateur>(`${this.apiUrl}/${id}`, request);
     }
 
-    // ✅ NOUVELLE MÉTHODE : Changer le statut (actif/inactif)
     changerStatut(id: string, actif: boolean): Observable<Utilisateur> {
         return this.http.patch<Utilisateur>(`${this.apiUrl}/${id}/statut`, { actif });
     }
 
-    // ✅ NOUVELLE MÉTHODE : Basculer l'état actif/inactif
     toggleActif(id: string): Observable<Utilisateur> {
         return this.http.patch<Utilisateur>(`${this.apiUrl}/${id}/toggle-actif`, null);
     }

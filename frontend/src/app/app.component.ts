@@ -2,11 +2,19 @@ import { Component, HostListener, OnInit, OnDestroy } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from './core/services/auth.service';
+import { PermissionService } from './core/services/permission.service';
+import { HasPermissionDirective } from './shared/directives/has-permission.directive';
 
 @Component({
     selector: 'app-root',
     standalone: true,
-    imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule],
+    imports: [
+        RouterOutlet,
+        RouterLink,
+        RouterLinkActive,
+        CommonModule,
+        HasPermissionDirective     // ✅ AJOUT : la directive de permissions
+    ],
     template: `
     <div class="app-container">
       <header class="app-header">
@@ -20,25 +28,31 @@ import { AuthService } from './core/services/auth.service';
 
         <nav class="main-nav">
           <!-- Dashboard -->
-          <a routerLink="/dashboard" routerLinkActive="active" class="nav-link">
+          <a *appHasPermission="'menu:DASHBOARD'"
+             routerLink="/dashboard" routerLinkActive="active" class="nav-link">
             <i class="pi pi-home"></i>
             <span>Dashboard</span>
           </a>
 
           <!-- Planning -->
-          <a routerLink="/planning" routerLinkActive="active" class="nav-link">
+          <a *appHasPermission="'menu:PLANNING'"
+             routerLink="/planning" routerLinkActive="active" class="nav-link">
             <i class="pi pi-calendar"></i>
             <span>Planning</span>
           </a>
 
           <!-- Statistiques -->
-          <a routerLink="/statistiques" routerLinkActive="active" class="nav-link">
+          <a *appHasPermission="'menu:STATISTIQUES'"
+             routerLink="/statistiques" routerLinkActive="active" class="nav-link">
             <i class="pi pi-chart-bar"></i>
             <span>Statistiques</span>
           </a>
 
-          <!-- Sous-menu Administration -->
-          <div class="nav-dropdown">
+          <!-- Sous-menu Administration : visible si menu AGENTS OU PROFILS OU UTILISATEURS -->
+          <div class="nav-dropdown"
+               *ngIf="permissionService.aAccesAuMenu('AGENTS') ||
+                      permissionService.aAccesAuMenu('PROFILS') ||
+                      permissionService.aAccesAuMenu('UTILISATEURS')">
             <button class="nav-link dropdown-toggle"
                     [class.active]="isAdminMenuActive()"
                     (click)="toggleAdminMenu($event)">
@@ -48,15 +62,18 @@ import { AuthService } from './core/services/auth.service';
                  [class.rotated]="isAdminMenuOpen"></i>
             </button>
             <div class="dropdown-menu" *ngIf="isAdminMenuOpen">
-              <a routerLink="/agents" routerLinkActive="active" class="dropdown-item">
+              <a *appHasPermission="'menu:AGENTS'"
+                 routerLink="/agents" routerLinkActive="active" class="dropdown-item">
                 <i class="pi pi-users"></i>
                 <span>Agents</span>
               </a>
-              <a routerLink="/profils" routerLinkActive="active" class="dropdown-item">
+              <a *appHasPermission="'menu:PROFILS'"
+                 routerLink="/profils" routerLinkActive="active" class="dropdown-item">
                 <i class="pi pi-id-card"></i>
                 <span>Profils</span>
               </a>
-              <a routerLink="/utilisateurs" routerLinkActive="active" class="dropdown-item">
+              <a *appHasPermission="'menu:UTILISATEURS'"
+                 routerLink="/utilisateurs" routerLinkActive="active" class="dropdown-item">
                 <i class="pi pi-user"></i>
                 <span>Utilisateurs</span>
               </a>
@@ -65,20 +82,15 @@ import { AuthService } from './core/services/auth.service';
 
           <!-- ⏰ HORLOGE DATE/HEURE CIRCULAIRE -->
           <div class="clock-widget" [title]="dateLongue">
-            <!-- Anneau extérieur animé -->
             <svg class="clock-ring" viewBox="0 0 44 44">
               <circle class="clock-ring-bg" cx="22" cy="22" r="20"></circle>
               <circle class="clock-ring-progress" cx="22" cy="22" r="20"
                       [style.stroke-dashoffset]="ringOffset"></circle>
             </svg>
-
-            <!-- Contenu -->
             <div class="clock-content">
               <span class="clock-time">{{ heureActuelle }}</span>
               <span class="clock-date">{{ dateCourte }}</span>
             </div>
-
-            <!-- Petit point clignotant -->
             <span class="clock-pulse"></span>
           </div>
 
@@ -90,7 +102,7 @@ import { AuthService } from './core/services/auth.service';
               </span>
               <div class="user-details">
                 <span class="user-name">{{ authService.getCurrentUser()?.username }}</span>
-                <span class="user-role">{{ authService.getCurrentUser()?.profilLibelle }}</span>
+                <span class="user-role">{{ getProfilLibelles() }}</span>
               </div>
             </div>
             <button class="btn-logout" (click)="logout()" title="Se déconnecter">
@@ -306,101 +318,90 @@ import { AuthService } from './core/services/auth.service';
     }
 
     /* ============================================================
-   ⏰ HORLOGE CIRCULAIRE (widget date/heure)
-   ============================================================ */
-.clock-widget {
-  position: relative;
-  width: 54px;
-  height: 54px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-left: 10px;
-  cursor: default;
-  user-select: none;
-  transition: transform 0.25s ease;
-}
+       HORLOGE
+       ============================================================ */
+    .clock-widget {
+      position: relative;
+      width: 54px;
+      height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 10px;
+      cursor: default;
+      user-select: none;
+      transition: transform 0.25s ease;
+    }
 
-.clock-widget:hover {
-  transform: scale(1.06);
-}
+    .clock-widget:hover { transform: scale(1.06); }
 
-/* Anneau SVG circulaire animé */
-.clock-ring {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  transform: rotate(-90deg);
-  pointer-events: none;
-}
+    .clock-ring {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      transform: rotate(-90deg);
+      pointer-events: none;
+    }
 
-/* Fond sombre du cercle : crée un "creux" qui met en valeur l'anneau */
-.clock-ring-bg {
-  fill: rgba(0, 0, 0, 0.28);
-  stroke: rgba(255, 255, 255, 0.15);
-  stroke-width: 1.5;
-}
+    .clock-ring-bg {
+      fill: rgba(0, 0, 0, 0.28);
+      stroke: rgba(255, 255, 255, 0.15);
+      stroke-width: 1.5;
+    }
 
-/* Anneau doré vif avec lueur */
-.clock-ring-progress {
-  fill: none;
-  stroke: #4DD0E1;                    /* ← CYAN CLAIR */
-  stroke-width: 2.5;
-  stroke-linecap: round;
-  stroke-dasharray: 125.66;
-  stroke-dashoffset: 0;
-  transition: stroke-dashoffset 0.5s linear;
-  filter: drop-shadow(0 0 4px rgba(77, 208, 225, 0.9));
-}
+    .clock-ring-progress {
+      fill: none;
+      stroke: #4DD0E1;
+      stroke-width: 2.5;
+      stroke-linecap: round;
+      stroke-dasharray: 125.66;
+      stroke-dashoffset: 0;
+      transition: stroke-dashoffset 0.5s linear;
+      filter: drop-shadow(0 0 4px rgba(77, 208, 225, 0.9));
+    }
 
-/* Contenu central */
-.clock-content {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-}
+    .clock-content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
 
-.clock-time {
-  font-size: 11px;
-  font-weight: 800;
-  color: #FFFFFF;
-  letter-spacing: 0.3px;
-  font-variant-numeric: tabular-nums;
-}
+    .clock-time {
+      font-size: 11px;
+      font-weight: 800;
+      color: #FFFFFF;
+      letter-spacing: 0.3px;
+      font-variant-numeric: tabular-nums;
+    }
 
-.clock-date {
-  font-size: 8px;
-  font-weight: 700;
-  color: #4DD0E1;                    /* ← Cyan pour la date */
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-top: 2px;
-}
+    .clock-date {
+      font-size: 8px;
+      font-weight: 700;
+      color: #4DD0E1;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 2px;
+    }
 
-/* Petit point pulse en haut à droite */
-.clock-pulse {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #4DD0E1;               /* ← Cyan vif */
-  box-shadow: 0 0 0 0 rgba(77, 208, 225, 0.7);
-  animation: pulse 2s infinite;
-}
+    .clock-pulse {
+      position: absolute;
+      top: 2px; right: 2px;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #4DD0E1;
+      box-shadow: 0 0 0 0 rgba(77, 208, 225, 0.7);
+      animation: pulse 2s infinite;
+    }
 
-@keyframes pulse {
-  0% { box-shadow: 0 0 0 0 rgba(77, 208, 225, 0.7); }
-  70% { box-shadow: 0 0 0 8px rgba(77, 208, 225, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(77, 208, 225, 0); }
-}
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(77, 208, 225, 0.7); }
+      70% { box-shadow: 0 0 0 8px rgba(77, 208, 225, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(77, 208, 225, 0); }
+    }
 
     /* ============================================================
        MENU UTILISATEUR
@@ -546,13 +547,20 @@ export class AppComponent implements OnInit, OnDestroy {
 
     constructor(
         public authService: AuthService,
+        public permissionService: PermissionService,   // ✅ NOUVEAU : public pour le template
         private router: Router
     ) {}
 
     ngOnInit(): void {
         this.mettreAJourHorloge();
-        // Rafraîchit toutes les secondes
         this.timerId = setInterval(() => this.mettreAJourHorloge(), 1000);
+
+        // ✅ NOUVEAU : charger les permissions si l'utilisateur est déjà connecté
+        if (this.authService.isAuthenticated()) {
+            this.permissionService.chargerMesPermissions().subscribe({
+                error: (err) => console.error('Erreur chargement permissions', err)
+            });
+        }
     }
 
     ngOnDestroy(): void {
@@ -562,34 +570,33 @@ export class AppComponent implements OnInit, OnDestroy {
     }
 
     /**
-     * ⏰ Met à jour l'heure, la date et la progression de l'anneau
+     * ✅ NOUVEAU : retourne les libellés de profils formatés
+     * (ex: "Administrateur, Planificateur")
      */
+    getProfilLibelles(): string {
+        const libelles = this.authService.getCurrentUser()?.profilLibelles;
+        if (!libelles || libelles.length === 0) return '-';
+        return libelles.join(', ');
+    }
+
     private mettreAJourHorloge(): void {
         const now = new Date();
-
-        // Heure HH:MM
         this.heureActuelle = now.toLocaleTimeString('fr-FR', {
             hour: '2-digit',
             minute: '2-digit'
         });
-
-        // Date courte : "27 SEP"
         this.dateCourte = now.toLocaleDateString('fr-FR', {
             day: '2-digit',
             month: 'short'
         }).replace('.', '').toUpperCase();
-
-        // Date longue : "samedi 27 septembre 2026"
         this.dateLongue = now.toLocaleDateString('fr-FR', {
             weekday: 'long',
             day: 'numeric',
             month: 'long',
             year: 'numeric'
         });
-
-        // Progression de l'anneau : % de la minute écoulée (0 → 60 secondes)
         const secondes = now.getSeconds();
-        const circonference = 2 * Math.PI * 20; // ≈ 125.66
+        const circonference = 2 * Math.PI * 20;
         this.ringOffset = circonference - (circonference * secondes / 60);
     }
 
@@ -615,6 +622,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
     logout(): void {
         if (confirm('Voulez-vous vous déconnecter ?')) {
+            this.permissionService.vider();   // ✅ NOUVEAU : vider les permissions
             this.authService.logout();
             this.router.navigate(['/login']);
         }

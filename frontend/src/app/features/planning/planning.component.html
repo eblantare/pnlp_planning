@@ -5,7 +5,8 @@
             <h1>Gestion du Planning des Activités</h1>
             <p class="subtitle">Suivi et planification des missions du personnel</p>
         </div>
-        <button class="btn-fab" (click)="openCreateForm()" title="Nouvelle activité">
+        <button *appHasPermission="'crudPlanning'"
+                class="btn-fab" (click)="openCreateForm()" title="Nouvelle activité">
             <span class="fab-icon">+</span>
         </button>
     </div>
@@ -120,6 +121,8 @@
                     <th class="col-dates">Période</th>
                     <th class="col-jours">Jours</th>
                     <th class="col-lieu">Lieu</th>
+                    <th class="col-type-lieu">Type-Lieu</th>
+                    <th class="col-programme">Programme</th>
                     <th class="col-financement">Financement</th>
                     <th class="col-agents">Participants</th>
                     <th class="col-statut">Statut</th>
@@ -154,6 +157,24 @@
                     <td class="col-lieu" [title]="activite.lieu || '-'">
                         {{ (activite.lieu || '-') | slice:0:15 }}{{ (activite.lieu?.length || 0) > 15 ? '...' : '' }}
                     </td>
+                    <td class="col-type-lieu">
+                        <span class="badge-type-lieu"
+                              [ngClass]="activite.typeLieu === 'RESIDENT' ? 'badge-resident' : 'badge-non-resident'"
+                              [title]="activite.typeLieu === 'RESIDENT' ? 'Résident' : 'Non résident'">
+                            {{ activite.typeLieu === 'RESIDENT' ? '🏠 Résident' : '🚗 Non résident' }}
+                        </span>
+                    </td>
+
+                    <td class="col-programme">
+                        <label class="toggle-switch"
+                               [title]="activite.auProgramme ? 'Retirer du programme' : 'Marquer au programme'">
+                            <input type="checkbox"
+                                   [checked]="activite.auProgramme"
+                                   [disabled]="!permissionService.peutCrudPlanning() || estCloture(activite.statut)"
+                                   (change)="toggleAuProgramme(activite, $event)">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </td>
                     <td class="col-financement" [title]="activite.sourceFinancement || '-'">
                         {{ (activite.sourceFinancement || '-') | slice:0:15 }}{{ (activite.sourceFinancement?.length || 0) > 15 ? '...' : '' }}
                     </td>
@@ -168,7 +189,8 @@
                         </ng-template>
                     </td>
                     <td class="col-statut">
-                        <select class="statut-select"
+                        <select *ngIf="permissionService.peutCrudPlanning(); else statutLecture"
+                                class="statut-select"
                                 [ngModel]="activite.statut"
                                 (ngModelChange)="changerStatutDirect(activite, $event)"
                                 [ngClass]="getStatutClass(activite.statut)">
@@ -179,6 +201,11 @@
                             <option value="ANNULEE">Annulée</option>
                             <option value="REPORTEE">Reportée</option>
                         </select>
+                        <ng-template #statutLecture>
+                            <span class="badge" [ngClass]="getStatutClass(activite.statut)">
+                                {{ getStatutLabel(activite.statut) }}
+                            </span>
+                        </ng-template>
                     </td>
                     <td class="col-actions">
                         <app-action-buttons
@@ -188,7 +215,7 @@
                     </td>
                 </tr>
                 <tr *ngIf="paginatedActivites.length === 0">
-                    <td colspan="9" class="empty-row">
+                    <td colspan="10" class="empty-row">
                         <div class="empty-state">
                             <span class="empty-icon">📭</span>
                             <p>Aucune activité trouvée</p>
@@ -284,14 +311,18 @@
                             <select [(ngModel)]="nouvelleActivite.statut"
                                     name="statut" class="form-control"
                                     (ngModelChange)="onStatutChange($event)">
-                                <option value="BROUILLON">Brouillon (sans dates obligatoires - à compléter plus tard)</option>
-                                <option value="PLANIFIEE">Planifiée (tous les champs obligatoires)</option>
+                                <option value="BROUILLON">Brouillon (sans dates obligatoires)</option>
+                                <option value="PLANIFIEE">Planifiée (TDR obligatoire)</option>
+                                <option *ngIf="editingActivite && editingActivite.statut !== 'BROUILLON'"
+                                        value="EN_COURS">
+                                    En cours (Ordre de mission obligatoire)
+                                </option>
                             </select>
                             <span class="form-hint">
-                            <strong>Brouillon</strong> : seuls le titre est requis. Dates, lieu et participants sont optionnels.
-                            <br>
-                            <strong>Planifiée</strong> : dates, lieu et au moins un participant sont obligatoires.
-                        </span>
+                                <strong>Brouillon</strong> : seul le titre est requis.<br>
+                                <strong>Planifiée</strong> : dates, lieu, participants et <strong>TDR conforme</strong> obligatoires.<br>
+                                <strong>En cours</strong> : <strong>Ordre de mission conforme</strong> obligatoire (lettre d'invitation optionnelle).
+                            </span>
                         </div>
                     </div>
 
@@ -332,48 +363,96 @@
                         </div>
                     </div>
 
-                    <!-- Lieu et financement -->
                     <div class="form-section">
                         <h3 class="form-section-title">
                             <span class="section-icon">📍</span> Lieu et financement
                             <span class="optional-badge" *ngIf="isBrouillon()">Optionnel</span>
-                            <span class="required-badge" *ngIf="!isBrouillon()">Lieu requis</span>
+                            <span class="required-badge"
+                                  *ngIf="!isBrouillon() && !isAuProgramme()">Lieu requis</span>
+                            <span class="optional-badge"
+                                  *ngIf="!isBrouillon() && isAuProgramme()">Au programme</span>
                         </h3>
 
-                        <div class="form-row">
+                        <div class="form-group">
+                            <div class="toggle-au-programme-card">
+                                <div class="toggle-au-programme-text">
+                                    <strong>📋 Activité au programme</strong>
+                                    <small>Activer si cette activité fait partie du programme et non d'une mission.</small>
+                                </div>
+                                <label class="toggle-switch toggle-switch-lg"
+                                       [title]="nouvelleActivite.auProgramme ? 'Retirer du programme' : 'Marquer au programme'">
+                                    <input type="checkbox"
+                                           [ngModel]="nouvelleActivite.auProgramme"
+                                           (ngModelChange)="onAuProgrammeChange($event)"
+                                           name="auProgramme"
+                                           [ngModelOptions]="{standalone: true}">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Champs visibles UNIQUEMENT si NON programme -->
+                        <ng-container *ngIf="!isAuProgramme()">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">
+                                        Lieu
+                                        <span class="required" *ngIf="!isBrouillon()">*</span>
+                                    </label>
+                                    <input type="text" [(ngModel)]="nouvelleActivite.lieu"
+                                           name="lieu" class="form-control"
+                                           [required]="!isBrouillon()"
+                                           placeholder="Ex: Plateaux, Centrale">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">
+                                        Source de financement
+                                        <span class="required" *ngIf="!isBrouillon()">*</span>
+                                    </label>
+                                    <input type="text" [(ngModel)]="nouvelleActivite.sourceFinancement"
+                                           name="sourceFinancement" class="form-control"
+                                           [required]="!isBrouillon()"
+                                           placeholder="Ex: FM, PNLP, État">
+                                </div>
+                            </div>
+
                             <div class="form-group">
                                 <label class="form-label">
-                                    Lieu
+                                    Type de lieu
                                     <span class="required" *ngIf="!isBrouillon()">*</span>
                                 </label>
-                                <input type="text" [(ngModel)]="nouvelleActivite.lieu"
-                                       name="lieu" class="form-control"
-                                       [required]="!isBrouillon()"
-                                       placeholder="Ex: Plateaux, Centrale">
+                                <select [(ngModel)]="nouvelleActivite.typeLieu"
+                                        name="typeLieu" class="form-control"
+                                        [required]="!isBrouillon()">
+                                    <option value="RESIDENT">🏠 Résident (dans la zone de l'agent)</option>
+                                    <option value="NON_RESIDENT">🚗 Non résident (déplacement / mission)</option>
+                                </select>
+                                <span class="form-hint">
+                                    <strong>Résident</strong> : l'agent exerce dans sa zone de résidence.<br>
+                                    <strong>Non résident</strong> : l'agent se déplace hors de sa zone.
+                                </span>
                             </div>
-                            <div class="form-group">
-                                <label class="form-label">Source de financement</label>
-                                <input type="text" [(ngModel)]="nouvelleActivite.sourceFinancement"
-                                       name="sourceFinancement" class="form-control"
-                                       placeholder="Ex: FM, PNLP, État">
-                            </div>
+                        </ng-container>
+
+                        <div class="form-info" *ngIf="isAuProgramme()">
+                            <span class="info-icon">ℹ️</span>
+                            Cette activité est <strong>au programme</strong> : le lieu, le type de lieu
+                            et la source de financement ne sont <strong>pas requis</strong>.
+                            Les participants ne seront <strong>pas comptés</strong> dans les jours de mission.
                         </div>
                     </div>
 
-                    <!-- Zones et participants - MASQUÉ si BROUILLON -->
+                    <!-- Zones et participants - VISIBLE pour tous (y compris au programme) -->
                     <div class="form-section" *ngIf="!isBrouillon()">
                         <h3 class="form-section-title">
                             <span class="section-icon">🗺️</span> Zones et participants
-                            <span class="required-badge">Requis</span>
+                            <span class="required-badge">Participants requis</span>
                             <span class="selected-count">
                             ({{ getTotalSelectedAgents() }} participant(s) au total)
                         </span>
                         </h3>
-
-                        <!-- Un bloc par groupe de zone -->
                         <div *ngFor="let group of zoneGroups; let gi = index" class="zone-group">
 
-                            <!-- En-tête du groupe -->
                             <div class="zone-group-header">
                             <span class="zone-group-title">
                                 📍 Zone {{ gi + 1 }}
@@ -390,7 +469,6 @@
                                 </button>
                             </div>
 
-                            <!-- Région -->
                             <div class="form-group">
                                 <label class="form-label">Région</label>
                                 <select class="form-control"
@@ -402,7 +480,6 @@
                                 </select>
                             </div>
 
-                            <!-- Districts -->
                             <div class="form-group" *ngIf="group.region">
                                 <label class="form-label">
                                     Districts (plusieurs choix possibles)
@@ -424,13 +501,11 @@
                                 </div>
                             </div>
 
-                            <!-- Récapitulatif de la zone -->
                             <div class="form-info" *ngIf="getGroupZone(gi)">
                                 <span class="info-icon">📍</span>
                                 Zone : <strong>{{ getGroupZone(gi) }}</strong>
                             </div>
 
-                            <!-- Participants du groupe -->
                             <div class="form-group">
                                 <label class="form-label">
                                     Participants pour cette zone
@@ -464,7 +539,6 @@
                                 </div>
                             </div>
 
-                            <!-- Slots à remplacer -->
                             <div *ngIf="slotsARemplacer[gi]?.length" class="slots-container">
                                 <label class="form-label">🔄 Participants à remplacer :</label>
                                 <div *ngFor="let slot of slotsARemplacer[gi]; let si = index"
@@ -484,13 +558,178 @@
                             </div>
                         </div>
 
-                        <!-- Bouton ajouter une autre zone -->
                         <button type="button"
                                 class="btn-add-group"
                                 (click)="ajouterGroupe()">
                             <span class="btn-add-icon">+</span>
                             Ajouter une autre zone
                         </button>
+                    </div>
+
+                    <!-- DOCUMENTS - MASQUÉ si BROUILLON OU AU PROGRAMME -->
+                    <div class="form-section" *ngIf="!isBrouillon() && !isAuProgramme()">
+                        <h3 class="form-section-title">
+                            <span class="section-icon">📎</span> Documents
+                        </h3>
+
+                        <!-- TDR -->
+                        <div class="file-upload-card"
+                             [class.disabled-card]="nouvelleActivite.statut !== 'PLANIFIEE'">
+                            <div class="file-upload-header">
+                                <div class="file-upload-title">
+                                    <i class="pi pi-file-pdf"></i>
+                                    <strong>Termes de Référence (TDR)</strong>
+                                    <span class="required-badge" *ngIf="nouvelleActivite.statut === 'PLANIFIEE'">Requis</span>
+                                    <span class="optional-badge" *ngIf="nouvelleActivite.statut !== 'PLANIFIEE'">Déjà joint</span>
+                                </div>
+                                <div class="file-upload-status" *ngIf="tdrExistant">
+                                    <i class="pi pi-check-circle" style="color:#2E7D32"></i>
+                                    Fichier actuel : <strong>{{ tdrExistant.filename }}</strong>
+                                </div>
+                            </div>
+
+                            <ng-container *ngIf="nouvelleActivite.statut === 'PLANIFIEE'">
+                                <div class="form-group">
+                                    <label class="form-label">Nouveau fichier (PDF, Word...)</label>
+                                    <input type="file" (change)="onTdrSelected($event)"
+                                           class="form-control" accept=".pdf,.doc,.docx">
+                                </div>
+                                <label class="conforme-checkbox">
+                                    <input type="checkbox" [(ngModel)]="tdrConforme"
+                                           [ngModelOptions]="{standalone: true}">
+                                    <span>Je certifie que ce document est <strong>conforme à l'original</strong> <span class="required">*</span></span>
+                                </label>
+                            </ng-container>
+
+                            <ng-container *ngIf="nouvelleActivite.statut === 'EN_COURS'">
+                                <p class="form-hint" style="margin-top: 8px;">
+                                    Document déjà validé à l'étape Planifiée. Non modifiable ici.
+                                </p>
+                            </ng-container>
+
+                            <div *ngIf="tdrExistant" class="file-upload-actions">
+                                <button type="button" class="btn-secondary btn-sm"
+                                        (click)="telechargerFichier(editingActivite!.id!, 'tdr', tdrExistant.filename)">
+                                    <i class="pi pi-download"></i> Télécharger
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- OM -->
+                        <div class="file-upload-card"
+                             [class.disabled-card]="nouvelleActivite.statut !== 'EN_COURS'">
+                            <div class="file-upload-header">
+                                <div class="file-upload-title">
+                                    <i class="pi pi-file-pdf"></i>
+                                    <strong>Ordre de Mission</strong>
+                                    <span class="required-badge" *ngIf="nouvelleActivite.statut === 'EN_COURS'">Requis</span>
+                                    <span class="optional-badge" *ngIf="nouvelleActivite.statut === 'PLANIFIEE'">Pour passage En cours</span>
+                                </div>
+                                <div class="file-upload-status" *ngIf="ordreMissionExistant">
+                                    <i class="pi pi-check-circle" style="color:#2E7D32"></i>
+                                    Fichier actuel : <strong>{{ ordreMissionExistant.filename }}</strong>
+                                </div>
+                            </div>
+
+                            <ng-container *ngIf="nouvelleActivite.statut === 'EN_COURS'">
+                                <div class="form-group">
+                                    <label class="form-label">Nouveau fichier (PDF, Word...)</label>
+                                    <input type="file" (change)="onOrdreMissionSelected($event)"
+                                           class="form-control" accept=".pdf,.doc,.docx">
+                                </div>
+                                <label class="conforme-checkbox">
+                                    <input type="checkbox" [(ngModel)]="ordreMissionConforme"
+                                           [ngModelOptions]="{standalone: true}">
+                                    <span>Je certifie que ce document est <strong>conforme à l'original</strong> <span class="required">*</span></span>
+                                </label>
+                            </ng-container>
+
+                            <ng-container *ngIf="nouvelleActivite.statut === 'PLANIFIEE'">
+                                <div class="form-group">
+                                    <label class="form-label">Nouveau fichier (PDF, Word...)</label>
+                                    <input type="file" class="form-control" disabled>
+                                </div>
+                                <label class="conforme-checkbox" style="opacity: 0.6; pointer-events: none;">
+                                    <input type="checkbox" disabled>
+                                    <span>Je certifie que ce document est <strong>conforme à l'original</strong></span>
+                                </label>
+                                <p class="form-hint" style="margin-top: 8px;">
+                                    Pour activer ce champ : choisissez le statut <strong>En cours</strong> ci-dessus.
+                                </p>
+                            </ng-container>
+
+                            <div *ngIf="ordreMissionExistant" class="file-upload-actions">
+                                <button type="button" class="btn-secondary btn-sm"
+                                        (click)="telechargerFichier(editingActivite!.id!, 'ordre_mission', ordreMissionExistant.filename)">
+                                    <i class="pi pi-download"></i> Télécharger
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Lettre -->
+                        <div class="file-upload-card"
+                             [class.disabled-card]="nouvelleActivite.statut !== 'EN_COURS'">
+                            <div class="file-upload-header">
+                                <div class="file-upload-title">
+                                    <i class="pi pi-envelope"></i>
+                                    <strong>Lettre d'invitation</strong>
+                                    <span class="optional-badge">Optionnel</span>
+                                </div>
+                                <div class="file-upload-status" *ngIf="lettreInvitationExistante">
+                                    <i class="pi pi-check-circle" style="color:#2E7D32"></i>
+                                    Fichier actuel : <strong>{{ lettreInvitationExistante.filename }}</strong>
+                                </div>
+                            </div>
+
+                            <ng-container *ngIf="nouvelleActivite.statut === 'EN_COURS'">
+                                <div class="form-group">
+                                    <label class="form-label">Fichier</label>
+                                    <input type="file" (change)="onLettreInvitationSelected($event)"
+                                           class="form-control" accept=".pdf,.doc,.docx">
+                                </div>
+                                <label class="conforme-checkbox">
+                                    <input type="checkbox" [(ngModel)]="lettreInvitationConforme"
+                                           [ngModelOptions]="{standalone: true}">
+                                    <span>Je certifie que ce document est <strong>conforme à l'original</strong></span>
+                                </label>
+                            </ng-container>
+
+                            <ng-container *ngIf="nouvelleActivite.statut === 'PLANIFIEE'">
+                                <div class="form-group">
+                                    <label class="form-label">Fichier</label>
+                                    <input type="file" class="form-control" disabled>
+                                </div>
+                                <label class="conforme-checkbox" style="opacity: 0.6; pointer-events: none;">
+                                    <input type="checkbox" disabled>
+                                    <span>Je certifie que ce document est <strong>conforme à l'original</strong></span>
+                                </label>
+                            </ng-container>
+
+                            <div *ngIf="lettreInvitationExistante" class="file-upload-actions">
+                                <button type="button" class="btn-secondary btn-sm"
+                                        (click)="telechargerFichier(editingActivite!.id!, 'lettre', lettreInvitationExistante.filename)">
+                                    <i class="pi pi-download"></i> Télécharger
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Message informatif : AU PROGRAMME (documents masqués) -->
+                    <div class="form-section" *ngIf="!isBrouillon() && isAuProgramme()">
+                        <div class="alert alert-info-au-programme">
+                            <span class="alert-icon">ℹ️</span>
+                            <div>
+                                <strong>Activité au programme</strong>
+                                <p style="margin: 6px 0 0 0;">
+                                    Cette activité <strong>ne nécessite aucun document</strong>
+                                    (TDR, ordre de mission, lettre d'invitation).
+                                    En revanche, vous devez <strong>obligatoirement associer au moins un participant</strong>
+                                    via la section "Zones et participants" ci-dessus.
+                                    Les jours de mission de ces participants ne seront <strong>pas comptés</strong>
+                                    dans les statistiques.
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Message informatif pour BROUILLON -->
@@ -551,9 +790,6 @@
                             <li><strong>Retirer</strong> le participant de l'activité</li>
                             <li><strong>Forcer</strong> l'affectation malgré le conflit</li>
                         </ul>
-                        <p class="text-muted" style="margin-top: 8px;">
-                            💡 Après avoir retiré un participant, un bouton <strong>Remplacer</strong> apparaîtra dans le formulaire.
-                        </p>
                     </div>
                 </div>
 
@@ -690,6 +926,14 @@
                     <span class="detail-label">Titre :</span>
                     <span class="detail-value">{{ selectedActivite.titre }}</span>
                 </div>
+                <div class="detail-row">
+                    <span class="detail-label">Au programme :</span>
+                    <span class="detail-value">
+                        <span class="badge" [ngClass]="selectedActivite.auProgramme ? 'badge-programme' : 'badge-mission'">
+                            {{ selectedActivite.auProgramme ? '📋 Au programme' : '🎯 Mission' }}
+                        </span>
+                    </span>
+                </div>
                 <div class="detail-row" *ngIf="selectedActivite.commentaires">
                     <span class="detail-label">Commentaires :</span>
                     <span class="detail-value">{{ selectedActivite.commentaires }}</span>
@@ -707,9 +951,58 @@
                     <span class="detail-value">{{ selectedActivite.lieu || '-' }}</span>
                 </div>
                 <div class="detail-row">
+                    <span class="detail-label">Type de lieu :</span>
+                    <span class="detail-value">
+                        <span class="badge-type-lieu-detail"
+                              [ngClass]="selectedActivite.typeLieu === 'RESIDENT' ? 'badge-resident' : 'badge-non-resident'">
+                            {{ selectedActivite.typeLieu === 'RESIDENT' ? '🏠 Résident' : '🚗 Non résident' }}
+                        </span>
+                    </span>
+                </div>
+                <div class="detail-row">
                     <span class="detail-label">Financement :</span>
                     <span class="detail-value">{{ selectedActivite.sourceFinancement || '-' }}</span>
                 </div>
+
+                <div class="detail-row" *ngIf="selectedActivite.tdrFilename">
+                    <span class="detail-label">TDR :</span>
+                    <span class="detail-value">
+                        <a href="javascript:void(0)"
+                           (click)="telechargerFichier(selectedActivite.id!, 'tdr', selectedActivite.tdrFilename!)">
+                            <i class="pi pi-download"></i> {{ selectedActivite.tdrFilename }}
+                        </a>
+                        <span class="badge-conforme" *ngIf="selectedActivite.tdrConforme">
+                            <i class="pi pi-check-circle"></i> Conforme
+                        </span>
+                        <span class="badge-non-conforme" *ngIf="!selectedActivite.tdrConforme">
+                            <i class="pi pi-exclamation-triangle"></i> Non conforme
+                        </span>
+                    </span>
+                </div>
+
+                <div class="detail-row" *ngIf="selectedActivite.ordreMissionFilename">
+                    <span class="detail-label">Ordre de mission :</span>
+                    <span class="detail-value">
+                        <a href="javascript:void(0)"
+                           (click)="telechargerFichier(selectedActivite.id!, 'ordre_mission', selectedActivite.ordreMissionFilename!)">
+                            <i class="pi pi-download"></i> {{ selectedActivite.ordreMissionFilename }}
+                        </a>
+                        <span class="badge-conforme" *ngIf="selectedActivite.ordreMissionConforme">
+                            <i class="pi pi-check-circle"></i> Conforme
+                        </span>
+                    </span>
+                </div>
+
+                <div class="detail-row" *ngIf="selectedActivite.lettreInvitationFilename">
+                    <span class="detail-label">Lettre d'invitation :</span>
+                    <span class="detail-value">
+                        <a href="javascript:void(0)"
+                           (click)="telechargerFichier(selectedActivite.id!, 'lettre', selectedActivite.lettreInvitationFilename!)">
+                            <i class="pi pi-download"></i> {{ selectedActivite.lettreInvitationFilename }}
+                        </a>
+                    </span>
+                </div>
+
                 <div class="detail-row">
                     <span class="detail-label">Statut :</span>
                     <span class="detail-value">
@@ -741,7 +1034,7 @@
                     <i class="pi pi-times"></i>
                 </button>
                 <button type="button" class="icon-btn-edit"
-                        *ngIf="selectedActivite?.statut === 'PLANIFIEE' || selectedActivite?.statut === 'CREEE'"
+                        *ngIf="selectedActivite?.statut === 'PLANIFIEE' || selectedActivite?.statut === 'BROUILLON'"
                         (click)="editActivite(selectedActivite!); closeDetailModal()"
                         title="Modifier">
                     <i class="pi pi-pencil"></i>

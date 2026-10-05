@@ -1,13 +1,15 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { forkJoin } from 'rxjs';
-
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+import { PermissionService } from '../../core/services/permission.service';
 import { PlanningService, PlanningMensuel, Activite } from '../../core/services/planning.service';
 import { AgentService, Agent } from '../../core/services/agent.service';
 import { UtilisateurService, Utilisateur } from '../../core/services/utilisateur.service';
 import { ProfilService, Profil } from '../../core/services/profil.service';
 import { AuthService } from '../../core/services/auth.service';
+import { RefreshService } from '../../core/services/refresh.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -45,7 +47,8 @@ export class DashboardComponent implements OnInit {
     totalUtilisateurs: 0,
     utilisateursActifs: 0,
     totalProfils: 0,
-    tauxOccupation: 0
+    tauxOccupation: 0,
+    activitesAuProgramme: 0,
   };
 
   // Activités récentes
@@ -63,28 +66,49 @@ export class DashboardComponent implements OnInit {
       private agentService: AgentService,
       private utilisateurService: UtilisateurService,
       private profilService: ProfilService,
-      public authService: AuthService
+      public permissionService: PermissionService,
+      public authService: AuthService,
+      private refreshService: RefreshService
   ) { }
 
   ngOnInit(): void {
-    this.loadAllData();
+    // ✅ CORRECTION : on ne charge PLUS manuellement au démarrage.
+    //    Le BehaviorSubject du RefreshService émet immédiatement sa valeur
+    //    initiale (0), ce qui déclenche le 1er chargement.
+    //    Cela évite un double appel HTTP (un pour ngOnInit, un pour le BehaviorSubject).
+    //    À chaque mutation sur un autre écran, le compteur est incrémenté
+    //    et le chargement se refait automatiquement.
+    this.refreshService.refresh$.subscribe(() => {
+      this.loadAllData();
+    });
   }
 
   loadAllData(): void {
     this.isLoading = true;
     this.errorMessage = '';
 
+    // ✅ TOLÉRANT À TOUTES LES ERREURS (403, 500, etc.)
     forkJoin({
-      planning: this.planningService.getPlanningMensuel(this.annee, this.mois),
-      agents: this.agentService.getAllAgents(),
-      utilisateurs: this.utilisateurService.getAllUtilisateurs(),
-      profils: this.profilService.getProfilsActifs()
+      planning: this.planningService.getPlanningMensuel(this.annee, this.mois).pipe(
+          catchError((err) => {
+            console.warn('⚠️ [Dashboard] Erreur planning:', err.status);
+            return of({
+              mois: `${this.annee}-${String(this.mois).padStart(2, '0')}`,
+              activites: [],
+              planningParAgent: {}
+            } as PlanningMensuel);
+          })
+      ),
+      agents: this.agentService.getAllAgents().pipe(
+          catchError((err) => {
+            console.warn('⚠️ [Dashboard] Erreur agents:', err.status);
+            return of([] as Agent[]);
+          })
+      )
     }).subscribe({
       next: (result) => {
         this.activites = result.planning.activites || [];
         this.agents = result.agents || [];
-        this.utilisateurs = result.utilisateurs || [];
-        this.profils = result.profils || [];
 
         this.calculerStatistiques();
         this.calculerActivites();
@@ -93,15 +117,44 @@ export class DashboardComponent implements OnInit {
         this.isLoading = false;
       },
       error: (err: any) => {
-        console.error('Erreur chargement dashboard', err);
+        console.error('❌ Erreur critique dashboard', err);
         this.errorMessage = 'Erreur lors du chargement des données';
         this.isLoading = false;
       }
     });
+
+    // ✅ Charger les utilisateurs SEULEMENT si autorisé
+    if (this.permissionService.peutCrudUtilisateurs()) {
+      this.utilisateurService.getAllUtilisateurs().pipe(
+          catchError(() => of([] as Utilisateur[]))
+      ).subscribe({
+        next: (data) => {
+          this.utilisateurs = data;
+          this.calculerStatistiques();
+        }
+      });
+    } else {
+      this.utilisateurs = [];
+    }
+
+    // ✅ Charger les profils SEULEMENT si autorisé
+    if (this.permissionService.peutCrudProfils() ||
+        this.permissionService.aAccesAuMenu('AGENTS')) {
+      this.profilService.getProfilsActifs().pipe(
+          catchError(() => of([] as Profil[]))
+      ).subscribe({
+        next: (data) => {
+          this.profils = data;
+          this.calculerStatistiques();
+        }
+      });
+    } else {
+      this.profils = [];
+    }
   }
 
   // ============================================================
-  // ✅ HELPER : parse une date string en Date ou null si invalide
+  // HELPERS : parsing de dates (sans heure)
   // ============================================================
   private parseDate(dateStr: string | undefined | null): Date | null {
     if (!dateStr) return null;
@@ -109,32 +162,55 @@ export class DashboardComponent implements OnInit {
     return isNaN(d.getTime()) ? null : d;
   }
 
-  // ============================================================
-  // ✅ HELPER : vérifie si l'activité est "en cours" aujourd'hui
-  // ============================================================
   private estEnCours(act: Activite): boolean {
     const debut = this.parseDate(act.dateDebut);
     const fin = this.parseDate(act.dateFin);
     if (!debut || !fin) return false;
-    return this.aujourdHui >= debut && this.aujourdHui <= fin;
+
+    // ✅ Exclure les statuts terminés/annulés/reportés/brouillon
+    const statut = act.statut;
+    if (statut === 'TERMINEE' || statut === 'ANNULEE'
+        || statut === 'REPORTEE' || statut === 'BROUILLON') {
+      return false;
+    }
+
+    // ✅ Exclure les activités au programme
+    if (act.auProgramme === true) {
+      return false;
+    }
+
+    const today = new Date(this.aujourdHui.getFullYear(),
+        this.aujourdHui.getMonth(),
+        this.aujourdHui.getDate());
+    const d = new Date(debut.getFullYear(), debut.getMonth(), debut.getDate());
+    const f = new Date(fin.getFullYear(), fin.getMonth(), fin.getDate());
+
+    return today >= d && today <= f;
   }
 
-  // ============================================================
-  // ✅ HELPER : vérifie si l'activité est future
-  // ============================================================
   private estFuture(act: Activite): boolean {
     const debut = this.parseDate(act.dateDebut);
     if (!debut) return false;
-    return debut > this.aujourdHui;
+
+    // ✅ Exclure les statuts terminés/annulés
+    const statut = act.statut;
+    if (statut === 'TERMINEE' || statut === 'ANNULEE' || statut === 'BROUILLON') {
+      return false;
+    }
+
+    const today = new Date(this.aujourdHui.getFullYear(),
+        this.aujourdHui.getMonth(),
+        this.aujourdHui.getDate());
+    const d = new Date(debut.getFullYear(), debut.getMonth(), debut.getDate());
+
+    return d > today;
   }
 
-  /**
-   * Calcule les statistiques globales
-   */
   private calculerStatistiques(): void {
     // Agents
     this.stats.totalAgents = this.agents.length;
     this.stats.agentsActifs = this.agents.filter(a => a.actif).length;
+    this.stats.activitesAuProgramme = this.activites.filter(a => a.auProgramme).length;
 
     // Agents en mission aujourd'hui
     const agentsEnMissionIds = new Set<string>();
@@ -144,7 +220,8 @@ export class DashboardComponent implements OnInit {
       }
     });
     this.stats.agentsEnMission = agentsEnMissionIds.size;
-    this.stats.agentsDisponibles = this.stats.agentsActifs - this.stats.agentsEnMission;
+    this.stats.agentsDisponibles = Math.max(
+        0, this.stats.agentsActifs - this.stats.agentsEnMission);
 
     // Activités
     this.stats.totalActivites = this.activites.length;
@@ -157,24 +234,21 @@ export class DashboardComponent implements OnInit {
     this.stats.utilisateursActifs = this.utilisateurs.filter(u => u.actif).length;
     this.stats.totalProfils = this.profils.length;
 
-    // Taux d'occupation global
+    // Taux d'occupation
     if (this.stats.agentsActifs > 0) {
       this.stats.tauxOccupation = Math.round(
           (this.stats.agentsEnMission * 100.0 / this.stats.agentsActifs) * 100
       ) / 100;
+    } else {
+      this.stats.tauxOccupation = 0;
     }
   }
 
-  /**
-   * Trie les activités : en cours, prochaines, récentes
-   */
   private calculerActivites(): void {
-    // Activités en cours (aujourd'hui dans la période)
     this.activitesEnCours = this.activites
         .filter(a => this.estEnCours(a))
         .slice(0, 3);
 
-    // ✅ Prochaines activités (début dans le futur) - null-safe
     this.prochainesActivites = this.activites
         .filter(a => this.estFuture(a))
         .sort((a, b) => {
@@ -184,7 +258,6 @@ export class DashboardComponent implements OnInit {
         })
         .slice(0, 3);
 
-    // ✅ Activités récentes - null-safe (brouillons sans date à la fin)
     this.activitesRecentes = [...this.activites]
         .sort((a, b) => {
           const da = this.parseDate(b.dateDebut)?.getTime() || 0;
@@ -194,17 +267,21 @@ export class DashboardComponent implements OnInit {
         .slice(0, 5);
   }
 
-  /**
-   * Top 5 agents avec le plus d'activités ce mois
-   */
   private calculerTopAgents(): void {
     const compteur: { [agentId: string]: number } = {};
 
-    this.activites.forEach(act => {
-      act.agentIds?.forEach(id => {
-        compteur[id] = (compteur[id] || 0) + 1;
-      });
-    });
+    // ✅ Ne compter QUE les activités non terminées/annulées/reportées, hors programme
+    this.activites
+        .filter(a => a.statut !== 'TERMINEE'
+            && a.statut !== 'ANNULEE'
+            && a.statut !== 'REPORTEE'
+            && a.statut !== 'BROUILLON'
+            && a.auProgramme !== true)
+        .forEach(act => {
+          act.agentIds?.forEach(id => {
+            compteur[id] = (compteur[id] || 0) + 1;
+          });
+        });
 
     this.topAgents = Object.entries(compteur)
         .map(([agentId, nb]) => {
@@ -272,7 +349,6 @@ export class DashboardComponent implements OnInit {
     return 'Bonsoir';
   }
 
-  // ✅ Accepte undefined / null
   formatDate(date: string | Date | undefined | null): string {
     if (!date) return '-';
     const d = typeof date === 'string' ? new Date(date) : date;
@@ -284,7 +360,6 @@ export class DashboardComponent implements OnInit {
     });
   }
 
-  // ✅ Accepte undefined / null
   formatDateShort(date: string | Date | undefined | null): string {
     if (!date) return '-';
     const d = typeof date === 'string' ? new Date(date) : date;

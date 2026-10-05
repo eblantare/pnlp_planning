@@ -14,11 +14,16 @@ public class StatistiquesGlobalesDTO {
     private int mois;
     private String moisLibelle;
 
-    // KPIs
+    // ✅ NOUVEAU : période personnalisée
+    private String dateDebut;
+    private String dateFin;
+    private String periodeLibelle;
+    private int agentsAuProgramme;
+
     private int totalAgents;
     private int agentsActifs;
     private int agentsEnMission;
-    private int agentsOccupes;         // ✅ NOUVEAU : agents affectés ce mois mais pas aujourd'hui
+    private int agentsOccupes;
     private int agentsDisponibles;
     private int agentsInactifs;
     private int totalActivites;
@@ -26,11 +31,11 @@ public class StatistiquesGlobalesDTO {
     private int totalJoursMission;
     private double tauxOccupationMoyen;
 
-    // Listes
     private List<StatistiquesAgentDTO> agents;
-    private List<StatistiquesAgentDTO> topAgents;      // Top 5 des plus occupés
-    private Map<String, Integer> repartitionMensuelle; // Pour graphique annuel
+    private List<StatistiquesAgentDTO> topAgents;
+    private Map<String, Integer> repartitionMensuelle;
+    private Map<String, Integer> missionsParAgent;
 
-    // Détail par agent
-    private Map<String, Integer> missionsParAgent;      // Nom -> nb missions dans l'année
+    // ✅ NOUVEAU : répartition par source de financement
+    private List<FinancementStatDTO> repartitionParFinancement;
 }

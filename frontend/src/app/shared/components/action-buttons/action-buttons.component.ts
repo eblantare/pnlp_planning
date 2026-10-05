@@ -11,6 +11,8 @@ export interface ActionButton {
     label: string;
     severity?: ActionSeverity;
     show?: boolean;
+    title?: string;       // tooltip (infobulle)
+    disabled?: boolean;
 }
 
 @Component({
@@ -23,7 +25,8 @@ export interface ActionButton {
                     type="button"
                     class="action-btn-native"
                     [ngClass]="'sev-' + (action.severity || 'secondary')"
-                    [title]="action.label"
+                    [title]="action.title || action.label"
+                    [disabled]="action.disabled"
                     (click)="onActionClick(action, $event)">
                 <i [class]="action.icon"></i>
             </button>
@@ -53,13 +56,18 @@ export interface ActionButton {
             color: #555;
         }
 
-        .action-btn-native:hover {
+        .action-btn-native:hover:not(:disabled) {
             transform: translateY(-1px) scale(1.05);
             box-shadow: 0 2px 6px rgba(0,0,0,0.15);
         }
 
-        .action-btn-native:active {
+        .action-btn-native:active:not(:disabled) {
             transform: translateY(0) scale(0.98);
+        }
+
+        .action-btn-native:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
         }
 
         .action-btn-native i {
@@ -67,19 +75,19 @@ export interface ActionButton {
         }
 
         .sev-info      { background: #E3F2FD; color: #1565C0; }
-        .sev-info:hover { background: #BBDEFB; }
+        .sev-info:hover:not(:disabled) { background: #BBDEFB; }
 
         .sev-warning   { background: #FFF3E0; color: #E65100; }
-        .sev-warning:hover { background: #FFE0B2; }
+        .sev-warning:hover:not(:disabled) { background: #FFE0B2; }
 
         .sev-danger    { background: #FFEBEE; color: #C62828; }
-        .sev-danger:hover { background: #FFCDD2; }
+        .sev-danger:hover:not(:disabled) { background: #FFCDD2; }
 
         .sev-success   { background: #E8F5E9; color: #2E7D32; }
-        .sev-success:hover { background: #C8E6C9; }
+        .sev-success:hover:not(:disabled) { background: #C8E6C9; }
 
         .sev-secondary { background: #F5F5F5; color: #555; }
-        .sev-secondary:hover { background: #E0E0E0; }
+        .sev-secondary:hover:not(:disabled) { background: #E0E0E0; }
     `]
 })
 export class ActionButtonsComponent {
@@ -91,7 +99,6 @@ export class ActionButtonsComponent {
     }
 
     onActionClick(action: ActionButton, event: Event): void {
-        console.log('🔘 Action cliquée:', action.id);   // ✅ Debug
         event.stopPropagation();
         event.preventDefault();
         this.actionClick.emit(action.id);

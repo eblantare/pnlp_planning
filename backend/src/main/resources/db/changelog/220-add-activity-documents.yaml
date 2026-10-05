@@ -1,0 +1,116 @@
+databaseChangeLog:
+  - changeSet:
+      id: 220-add-activity-documents
+      author: pnlp
+      comment: "Ajout des fichiers TDR, ordre de mission et lettre d'invitation"
+      changes:
+        # TDR (Termes De Référence)
+        - addColumn:
+            tableName: activites
+            columns:
+              - column:
+                  name: tdr_filename
+                  type: varchar(255)
+              - column:
+                  name: tdr_path
+                  type: varchar(500)
+              - column:
+                  name: tdr_uploaded_at
+                  type: timestamp
+              - column:
+                  name: tdr_conforme
+                  type: boolean
+                  defaultValueBoolean: false
+
+        # Ordre de mission
+        - addColumn:
+            tableName: activites
+            columns:
+              - column:
+                  name: ordre_mission_filename
+                  type: varchar(255)
+              - column:
+                  name: ordre_mission_path
+                  type: varchar(500)
+              - column:
+                  name: ordre_mission_uploaded_at
+                  type: timestamp
+              - column:
+                  name: ordre_mission_conforme
+                  type: boolean
+                  defaultValueBoolean: false
+
+        # Lettre d'invitation
+        - addColumn:
+            tableName: activites
+            columns:
+              - column:
+                  name: lettre_invitation_filename
+                  type: varchar(255)
+              - column:
+                  name: lettre_invitation_path
+                  type: varchar(500)
+              - column:
+                  name: lettre_invitation_uploaded_at
+                  type: timestamp
+              - column:
+                  name: lettre_invitation_conforme
+                  type: boolean
+                  defaultValueBoolean: false
+
+        # Suivi des emails
+        - addColumn:
+            tableName: activites
+            columns:
+              - column:
+                  name: tdr_email_envoye
+                  type: boolean
+                  defaultValueBoolean: false
+              - column:
+                  name: ordre_mission_email_envoye
+                  type: boolean
+                  defaultValueBoolean: false
+
+      rollback:
+        - dropColumn:
+            tableName: activites
+            columnName: tdr_filename
+        - dropColumn:
+            tableName: activites
+            columnName: tdr_path
+        - dropColumn:
+            tableName: activites
+            columnName: tdr_uploaded_at
+        - dropColumn:
+            tableName: activites
+            columnName: tdr_conforme
+        - dropColumn:
+            tableName: activites
+            columnName: ordre_mission_filename
+        - dropColumn:
+            tableName: activites
+            columnName: ordre_mission_path
+        - dropColumn:
+            tableName: activites
+            columnName: ordre_mission_uploaded_at
+        - dropColumn:
+            tableName: activites
+            columnName: ordre_mission_conforme
+        - dropColumn:
+            tableName: activites
+            columnName: lettre_invitation_filename
+        - dropColumn:
+            tableName: activites
+            columnName: lettre_invitation_path
+        - dropColumn:
+            tableName: activites
+            columnName: lettre_invitation_uploaded_at
+        - dropColumn:
+            tableName: activites
+            columnName: lettre_invitation_conforme
+        - dropColumn:
+            tableName: activites
+            columnName: tdr_email_envoye
+        - dropColumn:
+            tableName: activites
+            columnName: ordre_mission_email_envoye

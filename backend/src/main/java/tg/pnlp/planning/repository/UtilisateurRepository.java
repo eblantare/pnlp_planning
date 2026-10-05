@@ -21,15 +21,20 @@ public interface UtilisateurRepository extends JpaRepository<Utilisateur, UUID> 
 
     boolean existsByEmail(String email);
 
-    // ✅ NOUVEAU : Vérifier qu'un agent n'a pas déjà un compte utilisateur
     boolean existsByAgentId(UUID agentId);
 
     List<Utilisateur> findByActifTrue();
 
-    List<Utilisateur> findByProfilId(UUID profilId);
+    // ✅ MODIFIÉ : chercher par profil (via la table N-N)
+    @Query("SELECT DISTINCT u FROM Utilisateur u JOIN u.profils p WHERE p.id = :profilId")
+    List<Utilisateur> findByProfilId(@Param("profilId") UUID profilId);
 
     @Query("SELECT CASE WHEN COUNT(u) > 0 THEN true ELSE false END " +
             "FROM Utilisateur u WHERE u.email = :email AND u.id != :id")
     boolean existsByEmailAndIdNot(@Param("email") String email,
                                   @Param("id") UUID id);
+
+    // ✅ NOUVEAU : charger l'utilisateur avec ses profils (pour le login)
+    @Query("SELECT DISTINCT u FROM Utilisateur u LEFT JOIN FETCH u.profils WHERE u.username = :username")
+    Optional<Utilisateur> findByUsernameWithProfils(@Param("username") String username);
 }

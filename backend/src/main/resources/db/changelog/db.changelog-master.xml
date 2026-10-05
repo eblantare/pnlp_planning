@@ -13,5 +13,9 @@
     <include file="db/changelog/200-password-reset-tokens.yaml"/>
     <include file="db/changelog/210-add-statut-brouillon.yaml"/>
     <include file="db/changelog/211-dates-nullables-brouillon.yaml"/>
+    <include file="db/changelog/220-add-activity-documents.yaml"/>
+    <include file="db/changelog/012-add-type-lieu-activites.xml"/>
+    <include file="db/changelog/013-utilisateur-profils-nn.xml"/>
+    <include file="db/changelog/013-add-au-programme.xml"/>
 
 </databaseChangeLog>

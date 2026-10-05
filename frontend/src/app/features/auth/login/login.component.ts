@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';  // ✅ AJOUT RouterLink
 import { AuthService } from '../../../core/services/auth.service';
+import { PermissionService } from '../../../core/services/permission.service';
 
 @Component({
     selector: 'app-login',
@@ -22,7 +23,8 @@ export class LoginComponent {
     constructor(
         private authService: AuthService,
         private router: Router,
-        private route: ActivatedRoute
+        private route: ActivatedRoute,
+        private permissionService: PermissionService,   // ✅ NOUVEAU
     ) { }
 
     onSubmit(): void {
@@ -39,8 +41,18 @@ export class LoginComponent {
             password: this.password
         }).subscribe({
             next: () => {
-                const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
-                this.router.navigate([returnUrl]);
+                // ✅ NOUVEAU : charger les permissions AVANT la redirection
+                this.permissionService.chargerMesPermissions().subscribe({
+                    next: () => {
+                        const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
+                        this.router.navigate([returnUrl]);
+                    },
+                    error: () => {
+                        // En cas d'erreur, on redirige quand même
+                        const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
+                        this.router.navigate([returnUrl]);
+                    }
+                });
             },
             error: (err: any) => {
                 this.errorMessage = err.error?.message || 'Identifiants incorrects';
@@ -48,6 +60,7 @@ export class LoginComponent {
             }
         });
     }
+
 
     togglePassword(): void {
         this.showPassword = !this.showPassword;

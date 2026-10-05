@@ -10,6 +10,10 @@ import {
 import { AgentService, Agent } from '../../core/services/agent.service';
 import { ExportService } from '../../core/services/export.service';
 import { ActionButton, ActionButtonsComponent } from '../../shared/components/action-buttons/action-buttons.component';
+import { concatMap, Observable, of } from "rxjs";
+import { HasPermissionDirective } from '../../shared/directives/has-permission.directive';
+import { PermissionService } from '../../core/services/permission.service';
+import { RefreshService } from '../../core/services/refresh.service';
 
 interface ZoneGroup {
     id: string;
@@ -21,13 +25,12 @@ interface ZoneGroup {
 @Component({
     selector: 'app-planning',
     standalone: true,
-    imports: [CommonModule, FormsModule, ActionButtonsComponent],
+    imports: [CommonModule, FormsModule, ActionButtonsComponent, HasPermissionDirective],
     templateUrl: './planning.component.html',
     styleUrls: ['./planning.component.css'],
     encapsulation: ViewEncapsulation.None
 })
 export class PlanningComponent implements OnInit {
-    // Données
     activites: Activite[] = [];
     filteredActivites: Activite[] = [];
     paginatedActivites: Activite[] = [];
@@ -38,26 +41,34 @@ export class PlanningComponent implements OnInit {
     annee = new Date().getFullYear();
     mois = new Date().getMonth() + 1;
 
-    // Filtres
     searchTerm = '';
     filterStatut = '';
     searchAgent = '';
 
-    // Pagination
     currentPage = 1;
     itemsPerPage = 10;
     totalItems = 0;
     pageSizeOptions = [5, 10, 25, 50];
 
-    // Formulaire
     nouvelleActivite: Activite = this.getEmptyActivite();
     editingActivite: Activite | null = null;
 
-    // Zones groupées
+    tdrFile: File | null = null;
+    tdrConforme = false;
+
+    ordreMissionFile: File | null = null;
+    ordreMissionConforme = false;
+
+    lettreInvitationFile: File | null = null;
+    lettreInvitationConforme = false;
+
+    tdrExistant: { filename: string; uploadDate: string; conforme: boolean } | null = null;
+    ordreMissionExistant: { filename: string; uploadDate: string; conforme: boolean } | null = null;
+    lettreInvitationExistante: { filename: string; uploadDate: string; conforme: boolean } | null = null;
+
     zoneGroups: ZoneGroup[] = [];
     private zoneGroupCounter = 0;
 
-    // Régions et districts
     regions: { [key: string]: string[] } = {
         'Grand Lomé': ['Golfe', 'Agoènyivé'],
         'Maritime': ['Avé', 'Bas-Mono', 'Lacs', 'Vo', 'Yoto', 'Zio'],
@@ -67,28 +78,23 @@ export class PlanningComponent implements OnInit {
         'Savanes': ['Cinkancé', 'Kpendjal', 'Kpendjal-Ouest', 'Oti', 'Oti-Sud', 'Tandjouaré', 'Tône']
     };
 
-    // Modals
     showForm = false;
     showDetailModal = false;
     showConflitModal = false;
     showRemplacementModal = false;
     selectedActivite: Activite | null = null;
 
-    // Gestion des conflits
     conflitsDetectes: ConflitAgent[] = [];
     agentsForces: Set<string> = new Set();
     activiteEnAttente: Activite | null = null;
 
-    // Slots vides
     slotsARemplacer: { [groupIndex: number]: { district: string }[] } = {};
     remplacementEnCours: { groupIndex: number; slotIndex: number } | null = null;
     remplacantsDisponibles: Agent[] = [];
     isLoadingRemplacants = false;
 
-    // Recherche par groupe
     searchAgentByGroup: { [groupIndex: number]: string } = {};
 
-    // États
     isLoading = false;
     errorMessage = '';
     successMessage = '';
@@ -98,7 +104,9 @@ export class PlanningComponent implements OnInit {
     constructor(
         private planningService: PlanningService,
         private agentService: AgentService,
-        private exportService: ExportService
+        private exportService: ExportService,
+        public permissionService: PermissionService,
+        private refreshService: RefreshService
     ) { }
 
     ngOnInit(): void {
@@ -110,11 +118,25 @@ export class PlanningComponent implements OnInit {
         return {
             titre: '',
             commentaires: '',
-            // ✅ Pas de dateDebut/dateFin/lieu : laissés undefined
             sourceFinancement: '',
+            typeLieu: 'NON_RESIDENT',
+            auProgramme: false,
             statut: 'BROUILLON',
             agentIds: []
         };
+    }
+
+    isAuProgramme(): boolean {
+        return this.nouvelleActivite.auProgramme === true;
+    }
+
+    onAuProgrammeChange(value: boolean): void {
+        this.nouvelleActivite.auProgramme = value;
+        if (value) {
+            this.nouvelleActivite.lieu = undefined;
+            this.nouvelleActivite.sourceFinancement = '';
+            this.nouvelleActivite.typeLieu = undefined;
+        }
     }
 
     isBrouillon(): boolean {
@@ -125,9 +147,40 @@ export class PlanningComponent implements OnInit {
         return !this.isBrouillon();
     }
 
-    /**
-     * ✅ Parse une date "YYYY-MM-DD" en heure LOCALE
-     */
+    estCloture(statut?: string): boolean {
+        return statut === 'TERMINEE' || statut === 'ANNULEE' || statut === 'REPORTEE';
+    }
+
+    toggleAuProgramme(activite: Activite, event: any): void {
+        if (!activite.id) return;
+
+        const nouvelleValeur = event.target.checked;
+
+        const updated: Activite = {
+            ...activite,
+            auProgramme: nouvelleValeur
+        };
+
+        this.planningService.updateActivite(activite.id, updated).subscribe({
+            next: (reponse) => {
+                if (reponse.succes) {
+                    activite.auProgramme = nouvelleValeur;
+                    this.showSuccess(nouvelleValeur
+                        ? '✅ Activité marquée "au programme"'
+                        : '↩️ Activité retirée du programme');
+                    this.refreshService.demanderRafraichissement();
+                } else {
+                    event.target.checked = !nouvelleValeur;
+                    this.showError(reponse.message || 'Impossible de modifier le statut programme');
+                }
+            },
+            error: (err) => {
+                event.target.checked = !nouvelleValeur;
+                this.showError(err.error?.message || 'Erreur modification');
+            }
+        });
+    }
+
     private parseLocalDate(dateStr: string | undefined | null): Date | null {
         if (!dateStr) return null;
         if (dateStr.includes('T')) {
@@ -138,10 +191,15 @@ export class PlanningComponent implements OnInit {
         return new Date(parts[0], parts[1] - 1, parts[2]);
     }
 
+    private estActif(agent: Agent): boolean {
+        const v: any = (agent as any).actif;
+        return v === true || v === 'true';
+    }
+
     loadAgents(): void {
         this.agentService.getAllAgents().subscribe({
             next: (data) => {
-                this.agents = data.filter(a => a.actif === true);
+                this.agents = data.filter(a => this.estActif(a));
                 this.filteredAgents = this.agents;
             },
             error: (err) => console.error('Erreur chargement agents', err)
@@ -164,15 +222,10 @@ export class PlanningComponent implements OnInit {
         });
     }
 
-    // ========== TRI ==========
     trierActivites(activites: Activite[]): Activite[] {
         const ordreStatut: { [key: string]: number } = {
-            'BROUILLON': 1,
-            'PLANIFIEE': 2,
-            'EN_COURS': 3,
-            'REPORTEE': 4,
-            'TERMINEE': 5,
-            'ANNULEE': 6
+            'BROUILLON': 1, 'PLANIFIEE': 2, 'EN_COURS': 3,
+            'REPORTEE': 4, 'TERMINEE': 5, 'ANNULEE': 6
         };
 
         return [...activites].sort((a, b) => {
@@ -185,16 +238,14 @@ export class PlanningComponent implements OnInit {
         });
     }
 
-    // ========== STATS ==========
     getAgentsOccupes(): number {
         const agentsOccupes = new Set<string>();
         this.activites
-            .filter(a => a.statut === 'EN_COURS')
+            .filter(a => a.statut === 'EN_COURS' && !a.auProgramme)
             .forEach(a => a.agentIds?.forEach(id => agentsOccupes.add(id)));
         return agentsOccupes.size;
     }
 
-    // ========== FILTRES ==========
     applyFilters(): void {
         let filtered = [...this.activites];
 
@@ -233,7 +284,6 @@ export class PlanningComponent implements OnInit {
         return !!(this.searchTerm || this.filterStatut);
     }
 
-    // ========== PAGINATION ==========
     onPageChange(page: number): void {
         if (page < 1 || page > this.totalPages) return;
         this.currentPage = page;
@@ -269,8 +319,19 @@ export class PlanningComponent implements OnInit {
         return Math.min(this.currentPage * this.itemsPerPage, this.totalItems);
     }
 
-    // ========== FORMULAIRE ==========
     openCreateForm(): void {
+        this.loadAgents();
+
+        this.tdrFile = null;
+        this.tdrConforme = false;
+        this.ordreMissionFile = null;
+        this.ordreMissionConforme = false;
+        this.lettreInvitationFile = null;
+        this.lettreInvitationConforme = false;
+        this.tdrExistant = null;
+        this.ordreMissionExistant = null;
+        this.lettreInvitationExistante = null;
+
         this.editingActivite = null;
         this.nouvelleActivite = this.getEmptyActivite();
         this.zoneGroups = [];
@@ -280,12 +341,54 @@ export class PlanningComponent implements OnInit {
         this.showForm = true;
     }
 
-    editActivite(activite: Activite): void {
+    editActivite(activite: Activite, statutCible?: string): void {
+        this.agentService.getAllAgents().subscribe({
+            next: (data) => {
+                this.agents = data.filter(a => this.estActif(a));
+                this.filteredAgents = this.agents;
+                this._doEditActivite(activite, statutCible);
+            },
+            error: (err) => {
+                console.error('Erreur rechargement agents (edit)', err);
+                this._doEditActivite(activite, statutCible);
+            }
+        });
+    }
+
+    private _doEditActivite(activite: Activite, statutCible?: string): void {
+        this.tdrFile = null;
+        this.tdrConforme = activite.tdrConforme || false;
+        this.tdrExistant = activite.tdrFilename ? {
+            filename: activite.tdrFilename,
+            uploadDate: activite.tdrUploadedAt || '',
+            conforme: activite.tdrConforme || false
+        } : null;
+
+        this.ordreMissionFile = null;
+        this.ordreMissionConforme = activite.ordreMissionConforme || false;
+        this.ordreMissionExistant = activite.ordreMissionFilename ? {
+            filename: activite.ordreMissionFilename,
+            uploadDate: activite.ordreMissionUploadedAt || '',
+            conforme: activite.ordreMissionConforme || false
+        } : null;
+
+        this.lettreInvitationFile = null;
+        this.lettreInvitationConforme = activite.lettreInvitationConforme || false;
+        this.lettreInvitationExistante = activite.lettreInvitationFilename ? {
+            filename: activite.lettreInvitationFilename,
+            uploadDate: activite.lettreInvitationUploadedAt || '',
+            conforme: activite.lettreInvitationConforme || false
+        } : null;
+
         this.editingActivite = activite;
         this.nouvelleActivite = {
             ...activite,
             agentIds: activite.agentIds ? [...activite.agentIds] : []
         };
+
+        if (statutCible) {
+            this.nouvelleActivite.statut = statutCible;
+        }
 
         this.slotsARemplacer = {};
         this.searchAgentByGroup = {};
@@ -293,7 +396,9 @@ export class PlanningComponent implements OnInit {
 
         if (activite.agentIds && activite.agentIds.length > 0) {
             const zonesMap = new Map<string, string[]>();
+            const activeAgentIds = new Set(this.agents.map(a => a.id));
             activite.agentIds.forEach((id, index) => {
+                if (!activeAgentIds.has(id)) return;
                 const zone = activite.agentZonesList?.[index];
                 const key = zone || '__sans_zone__';
                 if (!zonesMap.has(key)) {
@@ -330,6 +435,16 @@ export class PlanningComponent implements OnInit {
     }
 
     closeForm(): void {
+        this.tdrFile = null;
+        this.tdrConforme = false;
+        this.ordreMissionFile = null;
+        this.ordreMissionConforme = false;
+        this.lettreInvitationFile = null;
+        this.lettreInvitationConforme = false;
+        this.tdrExistant = null;
+        this.ordreMissionExistant = null;
+        this.lettreInvitationExistante = null;
+
         this.showForm = false;
         this.editingActivite = null;
         this.nouvelleActivite = this.getEmptyActivite();
@@ -344,12 +459,23 @@ export class PlanningComponent implements OnInit {
     calculerNombreJours(): void {
         const debut = this.parseLocalDate(this.nouvelleActivite.dateDebut);
         const fin = this.parseLocalDate(this.nouvelleActivite.dateFin);
+
         if (debut && fin) {
-            const diff = Math.ceil((fin.getTime() - debut.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+            let diff = Math.ceil((fin.getTime() - debut.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+            if (!this.isAuProgramme() && this.nouvelleActivite.typeLieu === 'NON_RESIDENT') {
+                diff = diff + 1;
+            }
+
             this.nouvelleActivite.nombreJours = diff > 0 ? diff : 0;
         } else {
             this.nouvelleActivite.nombreJours = undefined;
         }
+    }
+
+    onTypeLieuChange(newTypeLieu: string): void {
+        this.nouvelleActivite.typeLieu = newTypeLieu;
+        this.calculerNombreJours();
     }
 
     onStatutChange(newStatut: string): void {
@@ -366,17 +492,14 @@ export class PlanningComponent implements OnInit {
             const erreurs: string[] = [];
             if (!this.nouvelleActivite.dateDebut) erreurs.push('la date de début');
             if (!this.nouvelleActivite.dateFin) erreurs.push('la date de fin');
-            if (!this.nouvelleActivite.lieu) erreurs.push('le lieu');
+            if (!this.isAuProgramme() && !this.nouvelleActivite.lieu) erreurs.push('le lieu');
 
             if (erreurs.length > 0) {
-                this.showError(
-                    `Veuillez renseigner ${erreurs.join(', ')} avant de planifier.`
-                );
+                this.showError(`Veuillez renseigner ${erreurs.join(', ')} avant de planifier.`);
             }
         }
     }
 
-    // ========== GESTION DES GROUPES DE ZONES ==========
     private generateGroupId(): string {
         return `group_${++this.zoneGroupCounter}_${Date.now()}`;
     }
@@ -442,7 +565,6 @@ export class PlanningComponent implements OnInit {
         return `${group.region}: ${Array.from(group.districts).join(', ')}`;
     }
 
-    // ========== AGENTS PAR GROUPE ==========
     isAgentInGroup(groupIndex: number, agentId: string): boolean {
         const group = this.zoneGroups[groupIndex];
         return group ? group.agentIds.includes(agentId) : false;
@@ -506,7 +628,12 @@ export class PlanningComponent implements OnInit {
         return { region, districts };
     }
 
-    // ========== CRÉATION / MODIFICATION ==========
+    /**
+     * ✅ CORRECTION :
+     *   - Participants OBLIGATOIRES dans tous les cas (y compris au programme).
+     *   - Lieu / financement / TDR / OM : uniquement hors programme.
+     *   - Les zones restent optionnelles (comportement inchangé).
+     */
     creerActivite(): void {
         if (!this.nouvelleActivite.titre) {
             this.showError('Le titre est obligatoire');
@@ -514,13 +641,38 @@ export class PlanningComponent implements OnInit {
         }
 
         const isBrouillon = this.isBrouillon();
+        const statut = this.nouvelleActivite.statut;
+        const estAuProgramme = this.isAuProgramme();
 
         if (!isBrouillon) {
             const erreurs: string[] = [];
             if (!this.nouvelleActivite.dateDebut) erreurs.push('la date de début');
             if (!this.nouvelleActivite.dateFin) erreurs.push('la date de fin');
-            if (!this.nouvelleActivite.lieu) erreurs.push('le lieu');
-            if (this.getTotalSelectedAgents() === 0) erreurs.push('au moins un participant');
+
+            // ✅ Participants obligatoires dans TOUS les cas
+            if (this.getTotalSelectedAgents() === 0) {
+                erreurs.push('au moins un participant');
+            }
+
+            // ✅ Si NON au programme : lieu + financement + documents obligatoires
+            if (!estAuProgramme) {
+                if (!this.nouvelleActivite.lieu) erreurs.push('le lieu');
+                if (!this.nouvelleActivite.sourceFinancement) erreurs.push('la source de financement');
+
+                if (statut === 'PLANIFIEE') {
+                    if (!this.tdrFile && !this.tdrExistant) {
+                        erreurs.push('le TDR (Termes de Référence)');
+                    } else if (!this.tdrConforme) {
+                        erreurs.push('la confirmation "conforme à l\'original" du TDR');
+                    }
+                } else if (statut === 'EN_COURS') {
+                    if (!this.ordreMissionFile && !this.ordreMissionExistant) {
+                        erreurs.push('l\'Ordre de Mission');
+                    } else if (!this.ordreMissionConforme) {
+                        erreurs.push('la confirmation "conforme à l\'original" de l\'Ordre de Mission');
+                    }
+                }
+            }
 
             if (erreurs.length > 0) {
                 this.showError(`Veuillez renseigner ${erreurs.join(', ')}.`);
@@ -528,10 +680,12 @@ export class PlanningComponent implements OnInit {
             }
         }
 
+        // ✅ Participants conservés même au programme
         const allAgentIds = isBrouillon ? [] : this.buildAllAgentIds();
-        const agentZones = isBrouillon ? {} : this.buildAgentZones();
 
-        // ✅ Convertir les chaînes vides en undefined
+        // ✅ Zones uniquement hors programme (au programme : pas de zone significative)
+        const agentZones = (isBrouillon || estAuProgramme) ? {} : this.buildAgentZones();
+
         const activiteFinale: Activite = {
             ...this.nouvelleActivite,
             dateDebut: this.nouvelleActivite.dateDebut || undefined,
@@ -544,18 +698,17 @@ export class PlanningComponent implements OnInit {
         this.isLoading = true;
 
         if (this.editingActivite && this.editingActivite.id) {
-            this.planningService.updateActivite(this.editingActivite.id, activiteFinale).subscribe({
+            const idActivite = this.editingActivite.id;
+            this.planningService.updateActivite(idActivite, activiteFinale).subscribe({
                 next: (reponse) => {
                     if (reponse.succes) {
-                        this.showSuccess('Activité modifiée');
-                        this.closeForm();
-                        this.loadPlanning();
+                        this.uploaderFichiersEtFinaliser(idActivite, 'Activité modifiée');
                     } else {
                         this.conflitsDetectes = reponse.conflits;
                         this.activiteEnAttente = { ...activiteFinale };
                         this.showConflitModal = true;
+                        this.isLoading = false;
                     }
-                    this.isLoading = false;
                 },
                 error: (err) => {
                     this.showError(err.error?.message || 'Erreur modification');
@@ -565,21 +718,25 @@ export class PlanningComponent implements OnInit {
         } else {
             this.planningService.creerActivite(activiteFinale).subscribe({
                 next: (reponse) => {
-                    if (reponse.succes) {
-                        const dateDebut = this.parseLocalDate(reponse.activite?.dateDebut);
+                    if (reponse.succes && reponse.activite?.id) {
+                        const dateDebut = this.parseLocalDate(reponse.activite.dateDebut);
                         if (dateDebut) {
                             this.mois = dateDebut.getMonth() + 1;
                             this.annee = dateDebut.getFullYear();
                         }
+                        this.uploaderFichiersEtFinaliser(reponse.activite.id, 'Activité créée');
+                    } else if (reponse.succes) {
                         this.showSuccess('Activité créée');
                         this.closeForm();
                         this.loadPlanning();
+                        this.refreshService.demanderRafraichissement();
+                        this.isLoading = false;
                     } else {
                         this.conflitsDetectes = reponse.conflits;
                         this.activiteEnAttente = { ...activiteFinale };
                         this.showConflitModal = true;
+                        this.isLoading = false;
                     }
-                    this.isLoading = false;
                 },
                 error: (err) => {
                     this.showError(err.error?.message || 'Erreur création');
@@ -589,7 +746,61 @@ export class PlanningComponent implements OnInit {
         }
     }
 
-    // ========== GESTION DES CONFLITS ==========
+    private uploaderFichiersEtFinaliser(activiteId: string, messageSucces: string): void {
+        // ✅ Si au programme : aucun fichier à uploader
+        if (this.isAuProgramme()) {
+            this.showSuccess(messageSucces);
+            this.closeForm();
+            this.loadPlanning();
+            this.refreshService.demanderRafraichissement();
+            this.isLoading = false;
+            return;
+        }
+
+        const uploads: Observable<any>[] = [];
+
+        if (this.tdrFile) {
+            uploads.push(this.planningService.uploadTdr(
+                activiteId, this.tdrFile, this.tdrConforme));
+        }
+        if (this.ordreMissionFile) {
+            uploads.push(this.planningService.uploadOrdreMission(
+                activiteId, this.ordreMissionFile, this.ordreMissionConforme));
+        }
+        if (this.lettreInvitationFile) {
+            uploads.push(this.planningService.uploadLettreInvitation(
+                activiteId, this.lettreInvitationFile, this.lettreInvitationConforme));
+        }
+
+        if (uploads.length === 0) {
+            this.showSuccess(messageSucces);
+            this.closeForm();
+            this.loadPlanning();
+            this.refreshService.demanderRafraichissement();
+            this.isLoading = false;
+            return;
+        }
+
+        const sequential$ = uploads.reduce(
+            (acc, task) => acc.pipe(concatMap(() => task)),
+            of(null) as Observable<any>
+        );
+
+        sequential$.subscribe({
+            next: () => {
+                this.showSuccess(messageSucces);
+                this.closeForm();
+                this.loadPlanning();
+                this.refreshService.demanderRafraichissement();
+                this.isLoading = false;
+            },
+            error: (err) => {
+                this.showError('Erreur upload fichier: ' + (err.error?.message || err.message));
+                this.isLoading = false;
+            }
+        });
+    }
+
     toggleAgentForce(agentId: string): void {
         if (this.agentsForces.has(agentId)) {
             this.agentsForces.delete(agentId);
@@ -666,7 +877,7 @@ export class PlanningComponent implements OnInit {
         ).subscribe({
             next: (agents) => {
                 this.remplacantsDisponibles = agents.filter(a =>
-                    !this.isAgentInAnyGroup(a.id!)
+                    this.estActif(a) && !this.isAgentInAnyGroup(a.id!)
                 );
                 this.isLoadingRemplacants = false;
             },
@@ -730,6 +941,7 @@ export class PlanningComponent implements OnInit {
                         this.closeConflitModal();
                         this.closeForm();
                         this.loadPlanning();
+                        this.refreshService.demanderRafraichissement();
                     } else {
                         this.conflitsDetectes = reponse.conflits;
                         this.showError(reponse.message);
@@ -754,6 +966,7 @@ export class PlanningComponent implements OnInit {
                         this.closeConflitModal();
                         this.closeForm();
                         this.loadPlanning();
+                        this.refreshService.demanderRafraichissement();
                     } else {
                         this.conflitsDetectes = reponse.conflits;
                         this.showError(reponse.message);
@@ -768,18 +981,63 @@ export class PlanningComponent implements OnInit {
         }
     }
 
-    // ========== STATUT ==========
+    /**
+     * ✅ CORRECTION : validation adaptée selon `auProgramme`.
+     *    - Participants obligatoires dans tous les cas.
+     *    - TDR/lieu/financement uniquement hors programme.
+     *    - OM uniquement hors programme.
+     */
     changerStatutDirect(activite: Activite, nouveauStatut: string): void {
         if (!activite.id) return;
         if (activite.statut === nouveauStatut) return;
 
+        // PLANIFIEE → EN_COURS
+        if (activite.statut === 'PLANIFIEE' && nouveauStatut === 'EN_COURS') {
+            const erreurs: string[] = [];
+
+            // ✅ OM requis uniquement hors programme
+            if (!activite.auProgramme) {
+                if (!activite.ordreMissionFilename) {
+                    erreurs.push('l\'Ordre de Mission');
+                } else if (!activite.ordreMissionConforme) {
+                    erreurs.push('la confirmation "conforme à l\'original" de l\'Ordre de Mission');
+                }
+            }
+
+            if (erreurs.length > 0) {
+                this.showError(
+                    `Impossible de démarrer : veuillez renseigner ${erreurs.join(', ')} via le formulaire de modification.`
+                );
+                if (confirm('Ouvrir le formulaire pour ajouter l\'Ordre de Mission ?')) {
+                    this.editActivite(activite, 'EN_COURS');
+                }
+                this.loadPlanning();
+                return;
+            }
+        }
+
+        // BROUILLON → PLANIFIEE
         if (activite.statut === 'BROUILLON' && nouveauStatut === 'PLANIFIEE') {
             const erreurs: string[] = [];
+
             if (!activite.dateDebut) erreurs.push('la date de début');
             if (!activite.dateFin) erreurs.push('la date de fin');
-            if (!activite.lieu) erreurs.push('le lieu');
+
+            // ✅ Participants obligatoires dans tous les cas
             if (!activite.agentIds || activite.agentIds.length === 0) {
                 erreurs.push('au moins un participant');
+            }
+
+            // ✅ Lieu/financement/TDR uniquement hors programme
+            if (!activite.auProgramme) {
+                if (!activite.lieu) erreurs.push('le lieu');
+                if (!activite.sourceFinancement) erreurs.push('la source de financement');
+
+                if (!activite.tdrFilename) {
+                    erreurs.push('le TDR');
+                } else if (!activite.tdrConforme) {
+                    erreurs.push('la confirmation "conforme à l\'original" du TDR');
+                }
             }
 
             if (erreurs.length > 0) {
@@ -787,7 +1045,7 @@ export class PlanningComponent implements OnInit {
                     `Impossible de planifier : veuillez renseigner ${erreurs.join(', ')} via le formulaire de modification.`
                 );
                 if (confirm('Ouvrir le formulaire pour compléter l\'activité ?')) {
-                    this.editActivite(activite);
+                    this.editActivite(activite, 'PLANIFIEE');
                 }
                 this.loadPlanning();
                 return;
@@ -823,28 +1081,31 @@ export class PlanningComponent implements OnInit {
             next: () => {
                 this.showSuccess(`Statut changé en "${label}"`);
                 this.loadPlanning();
+                this.refreshService.demanderRafraichissement();
                 this.isLoading = false;
             },
             error: (err) => {
-                this.showError(err.error?.message || 'Erreur changement statut');
+                const msg = err.error?.message || err.error?.error || 'Erreur changement statut';
+                this.showError(msg);
                 this.loadPlanning();
                 this.isLoading = false;
             }
         });
     }
 
-    // ========== RECHERCHE AGENTS ==========
     getFilteredAgentsForGroup(groupIndex: number): Agent[] {
         const term = (this.searchAgentByGroup[groupIndex] || '').toLowerCase().trim();
-        if (!term) return this.agents;
-        return this.agents.filter(a =>
+
+        const actifs = this.agents.filter(a => this.estActif(a));
+
+        if (!term) return actifs;
+        return actifs.filter(a =>
             a.nom?.toLowerCase().includes(term) ||
             a.prenom?.toLowerCase().includes(term) ||
             a.poste?.toLowerCase().includes(term)
         );
     }
 
-    // ========== ACTIONS ==========
     viewActivite(activite: Activite): void {
         this.selectedActivite = activite;
         this.showDetailModal = true;
@@ -862,13 +1123,13 @@ export class PlanningComponent implements OnInit {
                 next: () => {
                     this.showSuccess('Activité supprimée');
                     this.loadPlanning();
+                    this.refreshService.demanderRafraichissement();
                 },
                 error: () => this.showError('Erreur suppression')
             });
         }
     }
 
-    // ========== EXPORT ==========
     exportToExcel(): void {
         const dataToExport = this.filteredActivites.length > 0 ? this.filteredActivites : this.activites;
         const columns = [
@@ -930,7 +1191,6 @@ export class PlanningComponent implements OnInit {
         this.showSuccess('Export PDF réussi');
     }
 
-    // ========== UTILITAIRES ==========
     getStatutLabel(statut?: string): string {
         const labels: { [key: string]: string } = {
             'BROUILLON': 'Brouillon',
@@ -984,21 +1244,60 @@ export class PlanningComponent implements OnInit {
     }
 
     getActionsForActivite(activite: Activite): ActionButton[] {
-        const modifiable =
-            activite.statut === 'PLANIFIEE' ||
-            activite.statut === 'BROUILLON';
+        const statut = activite.statut;
+        const peutCrud = this.permissionService.peutCrudPlanning();
 
-        return [
+        const estCloture =
+            statut === 'TERMINEE' || statut === 'ANNULEE' || statut === 'REPORTEE';
+
+        // ✅ Actions de renvoi de documents uniquement si PAS au programme
+        const peutRenvoyerTdr =
+            peutCrud && !activite.auProgramme && !estCloture &&
+            statut !== 'BROUILLON' && !!activite.tdrFilename;
+
+        const peutRenvoyerOm =
+            peutCrud && !activite.auProgramme && statut === 'EN_COURS' &&
+            !!activite.ordreMissionFilename;
+
+        const modifiable =
+            peutCrud && (statut === 'PLANIFIEE' || statut === 'BROUILLON');
+
+        const actions: ActionButton[] = [
             {
                 id: 'view',
                 icon: 'pi pi-eye',
                 label: 'Voir détails',
+                title: 'Voir les détails de l\'activité',
                 severity: 'info'
-            },
+            }
+        ];
+
+        if (peutRenvoyerTdr) {
+            actions.push({
+                id: 'renvoyer-tdr',
+                icon: 'pi pi-envelope',
+                label: 'Renvoyer le TDR',
+                title: 'Renvoyer le TDR aux participants',
+                severity: 'success'
+            });
+        }
+
+        if (peutRenvoyerOm) {
+            actions.push({
+                id: 'renvoyer-om',
+                icon: 'pi pi-send',
+                label: 'Renvoyer l\'Ordre de mission',
+                title: 'Renvoyer l\'Ordre de mission / lettre d\'invitation',
+                severity: 'success'
+            });
+        }
+
+        actions.push(
             {
                 id: 'edit',
                 icon: 'pi pi-pencil',
                 label: 'Modifier',
+                title: 'Modifier l\'activité',
                 severity: 'warning',
                 show: modifiable
             },
@@ -1006,10 +1305,13 @@ export class PlanningComponent implements OnInit {
                 id: 'delete',
                 icon: 'pi pi-trash',
                 label: 'Supprimer',
+                title: 'Supprimer l\'activité',
                 severity: 'danger',
                 show: modifiable
             }
-        ];
+        );
+
+        return actions;
     }
 
     onActionActivite(actionId: string, activite: Activite): void {
@@ -1017,6 +1319,73 @@ export class PlanningComponent implements OnInit {
             case 'view': this.viewActivite(activite); break;
             case 'edit': this.editActivite(activite); break;
             case 'delete': this.deleteActivite(activite); break;
+            case 'renvoyer-tdr': this.renvoyerTdr(activite); break;
+            case 'renvoyer-om': this.renvoyerOrdreMission(activite); break;
         }
+    }
+
+    onTdrSelected(event: any): void {
+        const file = event.target.files?.[0];
+        if (file) this.tdrFile = file;
+    }
+
+    onOrdreMissionSelected(event: any): void {
+        const file = event.target.files?.[0];
+        if (file) this.ordreMissionFile = file;
+    }
+
+    onLettreInvitationSelected(event: any): void {
+        const file = event.target.files?.[0];
+        if (file) this.lettreInvitationFile = file;
+    }
+
+    telechargerFichier(activiteId: string, type: 'tdr' | 'ordre_mission' | 'lettre', filename: string): void {
+        this.planningService.telechargerFichier(activiteId, type).subscribe({
+            next: (blob) => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.click();
+                window.URL.revokeObjectURL(url);
+            },
+            error: () => this.showError('Erreur téléchargement fichier')
+        });
+    }
+
+    renvoyerTdr(activite: Activite): void {
+        if (!activite.id) return;
+        if (!confirm('Renvoyer le TDR à tous les participants ?')) return;
+
+        this.isLoading = true;
+        this.planningService.renvoyerTdr(activite.id).subscribe({
+            next: () => {
+                this.showSuccess('TDR renvoyé aux participants');
+                this.loadPlanning();
+                this.isLoading = false;
+            },
+            error: (err) => {
+                this.showError('Erreur renvoi TDR: ' + (err.error?.message || ''));
+                this.isLoading = false;
+            }
+        });
+    }
+
+    renvoyerOrdreMission(activite: Activite): void {
+        if (!activite.id) return;
+        if (!confirm('Renvoyer l\'Ordre de Mission à tous les participants ?')) return;
+
+        this.isLoading = true;
+        this.planningService.renvoyerOrdreMission(activite.id).subscribe({
+            next: () => {
+                this.showSuccess('Ordre de Mission renvoyé aux participants');
+                this.loadPlanning();
+                this.isLoading = false;
+            },
+            error: (err) => {
+                this.showError('Erreur renvoi Ordre de Mission: ' + (err.error?.message || ''));
+                this.isLoading = false;
+            }
+        });
     }
 }

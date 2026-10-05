@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- 1. Créer la table d'association utilisateur_profils -->
+    <changeSet id="013-create-utilisateur-profils" author="pnlp">
+        <createTable tableName="utilisateur_profils">
+            <column name="utilisateur_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_up_utilisateur"
+                             references="utilisateurs(id)"
+                             deleteCascade="true"/>
+            </column>
+            <column name="profil_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_up_profil"
+                             references="profils(id)"
+                             deleteCascade="true"/>
+            </column>
+        </createTable>
+
+        <addPrimaryKey tableName="utilisateur_profils"
+                       columnNames="utilisateur_id, profil_id"
+                       constraintName="pk_utilisateur_profils"/>
+
+        <createIndex tableName="utilisateur_profils" indexName="idx_up_utilisateur">
+            <column name="utilisateur_id"/>
+        </createIndex>
+        <createIndex tableName="utilisateur_profils" indexName="idx_up_profil">
+            <column name="profil_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- 2. Migrer les données : utilisateurs.profil_id → utilisateur_profils -->
+    <changeSet id="013-migrate-utilisateur-profils" author="pnlp">
+        <sql>
+            INSERT INTO utilisateur_profils (utilisateur_id, profil_id)
+            SELECT id, profil_id FROM utilisateurs WHERE profil_id IS NOT NULL;
+        </sql>
+    </changeSet>
+
+    <!-- 3. Supprimer l'ancienne colonne profil_id (optionnel, garder si vous préférez) -->
+    <changeSet id="013-drop-profil-id-column" author="pnlp">
+        <preConditions onFail="MARK_RAN">
+            <columnExists tableName="utilisateurs" columnName="profil_id"/>
+        </preConditions>
+        <dropColumn tableName="utilisateurs" columnName="profil_id"/>
+    </changeSet>
+
+</databaseChangeLog>

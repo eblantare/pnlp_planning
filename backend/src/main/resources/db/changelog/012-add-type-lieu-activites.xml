@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- ✅ NOUVEAU : ajout du champ type_lieu sur activites -->
+    <changeSet id="012-add-type-lieu-activites" author="pnlp">
+        <addColumn tableName="activites">
+            <column name="type_lieu" type="VARCHAR(20)" defaultValue="NON_RESIDENT">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <createIndex tableName="activites" indexName="idx_activites_type_lieu">
+            <column name="type_lieu"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

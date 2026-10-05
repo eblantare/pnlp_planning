@@ -2,6 +2,10 @@ spring:
   application:
     name: pnlp-planning
 
+  # ✅ Profil local activé par défaut (charge application-local.yml)
+  profiles:
+    active: local
+
   datasource:
     url: jdbc:postgresql://localhost:5432/pnlp_planning
     username: postgres
@@ -31,6 +35,13 @@ spring:
     change-log: classpath:db/changelog/db.changelog-master.xml
     enabled: true
 
+  # ✅ Config upload de fichiers
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 20MB
+      max-request-size: 25MB
+
   mail:
     host: smtp.gmail.com
     port: 587
@@ -42,6 +53,7 @@ spring:
           auth: true
           starttls:
             enable: true
+            required: true
 
   jackson:
     serialization:
@@ -59,6 +71,10 @@ app:
     expiration-ms: 86400000
 
   frontend-url: ${FRONTEND_URL:http://localhost:4200}
+
+  # ✅ Dossier de stockage des fichiers uploadés
+  upload:
+    dir: ${UPLOAD_DIR:uploads}
 
   password-reset:
     token-expiration-minutes: 30

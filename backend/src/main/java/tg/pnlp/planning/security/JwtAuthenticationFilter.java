@@ -17,6 +17,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -31,37 +32,48 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     @NonNull FilterChain filterChain)
             throws ServletException, IOException {
 
-        // ⚠️ Ici, le path CONTIENT le context-path /api
-        //    Ex: /api/auth/login, /api/planning/activites, etc.
         String path = request.getRequestURI();
 
-        // Si c'est un endpoint public, on laisse passer SANS vérifier le token
         if (isPublicEndpoint(path)) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        // Sinon, on cherche le token
         String token = extraireToken(request);
 
         if (token != null && jwtService.estValide(token)) {
             try {
                 Claims claims = jwtService.validerToken(token);
                 String username = claims.getSubject();
-                String profilCode = claims.get("profilCode", String.class);
+
+                @SuppressWarnings("unchecked")
+                List<String> profils = claims.get("profils", List.class);
+                if (profils == null || profils.isEmpty()) {
+                    String profilCode = claims.get("profilCode", String.class);
+                    profils = profilCode != null ? List.of(profilCode) : List.of();
+                }
+
+                // ✅ Normalisation centralisée via ProfilCodeNormalizer
+                List<SimpleGrantedAuthority> authorities = profils.stream()
+                        .map(ProfilCodeNormalizer::normaliser)
+                        .filter(code -> code != null && !code.isBlank())
+                        .distinct()
+                        .map(code -> new SimpleGrantedAuthority("ROLE_" + code))
+                        .collect(Collectors.toList());
 
                 UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                username,
-                                null,
-                                List.of(new SimpleGrantedAuthority("ROLE_" + profilCode))
-                        );
+                        new UsernamePasswordAuthenticationToken(username, null, authorities);
                 authentication.setDetails(
                         new WebAuthenticationDetailsSource().buildDetails(request)
                 );
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                log.debug("Utilisateur authentifié: {} ({})", username, profilCode);
+                log.debug("Utilisateur authentifié: {} (profils bruts: {}, autorités: {})",
+                        username,
+                        profils,
+                        authorities.stream()
+                                .map(SimpleGrantedAuthority::getAuthority)
+                                .collect(Collectors.toList()));
 
             } catch (Exception e) {
                 log.warn("Erreur lors de l'authentification: {}", e.getMessage());
@@ -71,10 +83,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    /**
-     * Détermine si un endpoint est public (pas besoin d'authentification).
-     * ⚠️ Le path contient le context-path /api.
-     */
     private boolean isPublicEndpoint(String path) {
         return path.startsWith("/api/auth/login")
                 || path.startsWith("/api/auth/logout")

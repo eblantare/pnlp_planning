@@ -8,13 +8,15 @@ import org.springframework.transaction.annotation.Transactional;
 import tg.pnlp.planning.dto.LoginRequest;
 import tg.pnlp.planning.dto.LoginResponse;
 import tg.pnlp.planning.dto.UtilisateurDTO;
+import tg.pnlp.planning.entity.Profil;
 import tg.pnlp.planning.entity.Utilisateur;
 import tg.pnlp.planning.exception.BusinessException;
 import tg.pnlp.planning.repository.UtilisateurRepository;
 import tg.pnlp.planning.security.JwtService;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -27,28 +29,25 @@ public class AuthService {
 
     @Transactional
     public LoginResponse login(LoginRequest request) {
-        // 1. Chercher l'utilisateur
-        Utilisateur user = utilisateurRepository.findByUsername(request.getUsername())
+        // ✅ Charger l'utilisateur AVEC ses profils (lazy → fetch)
+        Utilisateur user = utilisateurRepository.findByUsernameWithProfils(request.getUsername())
                 .orElseThrow(() -> new BusinessException("Nom d'utilisateur ou mot de passe incorrect"));
 
-        // 2. Vérifier le mot de passe
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new BusinessException("Nom d'utilisateur ou mot de passe incorrect");
         }
 
-        // 3. Vérifier que le compte est actif
         if (!user.getActif()) {
             throw new BusinessException("Votre compte est inactif. Contactez l'administrateur.");
         }
 
-        // 4. Mettre à jour la dernière connexion
         user.setDerniereConnexion(LocalDateTime.now());
         utilisateurRepository.save(user);
 
-        // 5. Générer le token
         String token = jwtService.genererToken(user);
 
-        log.info("Connexion réussie pour: {}", user.getUsername());
+        log.info("Connexion réussie pour: {} (profils: {})",
+                user.getUsername(), user.getProfilCodes());
 
         return LoginResponse.builder()
                 .token(token)
@@ -65,19 +64,30 @@ public class AuthService {
     }
 
     private UtilisateurDTO convertToDTO(Utilisateur user) {
+        List<UUID> profilIds = new ArrayList<>();
+        List<String> profilCodes = new ArrayList<>();
+        List<String> profilLibelles = new ArrayList<>();
+
+        if (user.getProfils() != null) {
+            user.getProfils().stream()
+                    .sorted(Comparator.comparing(Profil::getCode))
+                    .forEach(p -> {
+                        profilIds.add(p.getId());
+                        profilCodes.add(p.getCode());
+                        profilLibelles.add(p.getLibelle());
+                    });
+        }
+
         UtilisateurDTO.UtilisateurDTOBuilder builder = UtilisateurDTO.builder()
                 .id(user.getId())
                 .username(user.getUsername())
                 .email(user.getEmail())
+                .profilIds(profilIds)
+                .profilCodes(profilCodes)
+                .profilLibelles(profilLibelles)
                 .actif(user.getActif())
                 .derniereConnexion(user.getDerniereConnexion())
                 .createdAt(user.getCreatedAt());
-
-        if (user.getProfil() != null) {
-            builder.profilId(user.getProfil().getId())
-                    .profilCode(user.getProfil().getCode())
-                    .profilLibelle(user.getProfil().getLibelle());
-        }
 
         if (user.getAgent() != null) {
             builder.agentId(user.getAgent().getId())

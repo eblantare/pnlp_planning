@@ -19,13 +19,11 @@ public interface AffectationRepository extends JpaRepository<Affectation, UUID> 
 
     List<Affectation> findByActiviteId(UUID activiteId);
 
-    // ✅ NOUVEAU : Charge les affectations d'une activité AVEC l'agent
     @Query("SELECT af FROM Affectation af " +
             "JOIN FETCH af.agent " +
             "WHERE af.activite.id = :activiteId")
     List<Affectation> findByActiviteIdWithAgent(@Param("activiteId") UUID activiteId);
 
-    // ✅ NOUVEAU : Charge les affectations de plusieurs activités AVEC l'agent
     @Query("SELECT af FROM Affectation af " +
             "JOIN FETCH af.agent " +
             "WHERE af.activite.id IN :activiteIds")
@@ -57,4 +55,22 @@ public interface AffectationRepository extends JpaRepository<Affectation, UUID> 
     @Modifying
     @Transactional
     void deleteByActiviteId(UUID activiteId);
+
+    @Query("""
+    SELECT a FROM Affectation a
+    JOIN FETCH a.agent ag
+    WHERE a.activite.id = :activiteId
+      AND ag.actif = true
+""")
+    List<Affectation> findActivesByActiviteId(@Param("activiteId") UUID activiteId);
+
+    // ✅ NOUVEAU : compte les affectations d'une activité (utilisé pour vérifier s'il reste des agents)
+    long countByActiviteId(UUID activiteId);
+
+    // ✅ NOUVEAU : supprime les affectations d'une activité pour une liste d'agents
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM Affectation a WHERE a.activite.id = :activiteId AND a.agent.id IN :agentIds")
+    void deleteByActiviteIdAndAgentIdIn(@Param("activiteId") UUID activiteId,
+                                        @Param("agentIds") List<UUID> agentIds);
 }

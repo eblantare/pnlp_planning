@@ -471,7 +471,39 @@ textarea.form-control {
    TABLEAU ACTIVITÉS
    ============================================================ */
 
+/* ============================================================
+   TABLEAU ACTIVITÉS
+   ============================================================ */
+
+/* ✅ Conteneur scrollable horizontalement */
+.table-responsive {
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;  /* scroll fluide iOS */
+}
+
+/* Barre de scroll discrète */
+.table-responsive::-webkit-scrollbar {
+    height: 10px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+    background: #F3F4F6;
+    border-radius: 5px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+    background: #BDBDBD;
+    border-radius: 5px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #9CA3AF;
+}
+
 .activites-table {
+    /* ✅ Largeur minimale : force le scroll si l'écran est trop étroit */
+    min-width: 1400px;
     width: 100%;
     border-collapse: collapse;
     font-size: 13px;
@@ -509,16 +541,16 @@ textarea.form-control {
 
 .activite-row:hover { background: #F8F9FA; }
 
-/* Largeurs fixes par colonne (total = 100%) */
 .activites-table .col-num         { width: 4%;  text-align: center; }
-.activites-table .col-titre       { width: 22%; }
-.activites-table .col-dates       { width: 13%; }
+.activites-table .col-titre       { width: 18%; }   /* 22 → 18 */
+.activites-table .col-dates       { width: 12%; }   /* 13 → 12 */
 .activites-table .col-jours       { width: 5%;  text-align: center; }
 .activites-table .col-lieu        { width: 10%; }
+.activites-table .col-type-lieu   { width: 10%; text-align: center; white-space: nowrap; }  /* ✅ Nouveau */
 .activites-table .col-financement { width: 10%; }
 .activites-table .col-agents      { width: 7%;  text-align: center; }
-.activites-table .col-statut      { width: 15%; }
-.activites-table .col-actions     { width: 14%; text-align: center; }
+.activites-table .col-statut      { width: 13%; }   /* 15 → 13 */
+.activites-table .col-actions     { width: 11%; text-align: center; }  /* 14 → 11 */
 
 /* Cellules spécifiques : troncature */
 .activites-table .col-titre,
@@ -1653,4 +1685,327 @@ textarea.form-control {
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-left: 8px;
+}
+/* ============================================================
+   UPLOAD DE FICHIERS
+   ============================================================ */
+.file-upload-card {
+    background: #FAFAFA;
+    border: 1px solid #E5E7EB;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+}
+
+.file-upload-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #E5E7EB;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.file-upload-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #1B5E20;
+    font-size: 13px;
+}
+
+.file-upload-title i {
+    font-size: 16px;
+}
+
+.file-upload-status {
+    font-size: 11px;
+    color: #6B7280;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.file-upload-actions {
+    margin-top: 8px;
+    display: flex;
+    gap: 8px;
+}
+
+.conforme-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: #F0FDF4;
+    border: 1px dashed #86EFAC;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #166534;
+    transition: background 0.2s;
+}
+
+.conforme-checkbox:hover {
+    background: #DCFCE7;
+}
+
+.conforme-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #16A34A;
+    cursor: pointer;
+}
+
+/* Badges de conformité dans les détails */
+.badge-conforme {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: #DCFCE7;
+    color: #166534;
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 700;
+    margin-left: 6px;
+}
+
+.badge-non-conforme {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: #FEF3C7;
+    color: #92400E;
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 700;
+    margin-left: 6px;
+}
+
+/* Liens de téléchargement dans les détails */
+.detail-value a {
+    color: #1B5E20;
+    text-decoration: none;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+}
+
+.detail-value a:hover {
+    text-decoration: underline;
+    color: #2E7D32;
+}
+.file-upload-card.disabled-card {
+    opacity: 0.55;
+    background: #f5f5f5;
+    pointer-events: none;
+}
+.file-upload-card.disabled-card .file-upload-actions {
+    pointer-events: auto; /* garder le bouton Télécharger cliquable */
+}
+.activites-table .col-type-lieu {
+    width: 10%;           /* ✅ Plus large pour contenir le texte */
+    text-align: center;
+    white-space: nowrap;
+}
+
+.badge-type-lieu {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: help;
+}
+
+.badge-resident {
+    background: #E8F5E9;
+    color: #2E7D32;
+}
+
+.badge-non-resident {
+    background: #FFF3E0;
+    color: #E65100;
+}
+.badge-type-lieu-detail {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+/* ============================================================ */
+/* ✅ COLONNE "PROGRAMME" + TOGGLE                              */
+/* ============================================================ */
+
+.activites-table .col-programme {
+    width: 6%;
+    text-align: center;
+}
+
+/* Toggle switch iOS-like */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    cursor: pointer;
+    vertical-align: middle;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #D1D5DB;
+    border-radius: 24px;
+    transition: background 0.25s ease;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.toggle-slider::before {
+    content: "";
+    position: absolute;
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.25s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+}
+
+/* État coché → vert PNLP */
+.toggle-switch input:checked + .toggle-slider {
+    background: linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%);
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+    transform: translateX(20px);
+}
+
+/* Désactivé */
+.toggle-switch input:disabled + .toggle-slider {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.toggle-switch input:disabled {
+    cursor: not-allowed;
+}
+
+/* Focus visible (accessibilité) */
+.toggle-switch input:focus-visible + .toggle-slider {
+    outline: 2px solid #4DD0E1;
+    outline-offset: 2px;
+}
+
+/* Badges pour le modal détails */
+.badge-programme {
+    background: #EFF6FF;
+    color: #1E40AF;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.badge-mission {
+    background: #E8F5E9;
+    color: #1B5E20;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+/* ✅ Ajustement de la largeur minimale du tableau (nouvelle colonne) */
+.activites-table {
+    min-width: 1500px;   /* était 1400px */
+}
+/* ============================================================ */
+/* ✅ TOGGLE "AU PROGRAMME" DANS LE FORMULAIRE (grande taille)  */
+/* ============================================================ */
+
+.toggle-au-programme-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 16px;
+    background: #EFF6FF;
+    border: 1px dashed #3B82F6;
+    border-radius: 10px;
+    transition: all 0.2s;
+    margin-bottom: 4px;
+}
+
+.toggle-au-programme-card:hover {
+    background: #DBEAFE;
+    border-color: #2563EB;
+}
+
+.toggle-au-programme-text {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1;
+    min-width: 0;
+}
+
+.toggle-au-programme-text strong {
+    color: #1E40AF;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.toggle-au-programme-text small {
+    color: #6B7280;
+    font-size: 11px;
+    line-height: 1.3;
+}
+
+/* Version large du toggle (formulaire) */
+.toggle-switch.toggle-switch-lg {
+    width: 54px;
+    height: 30px;
+    flex-shrink: 0;
+}
+
+.toggle-switch.toggle-switch-lg .toggle-slider {
+    border-radius: 30px;
+}
+
+.toggle-switch.toggle-switch-lg .toggle-slider::before {
+    height: 22px;
+    width: 22px;
+    left: 4px;
+    bottom: 4px;
+}
+
+.toggle-switch.toggle-switch-lg input:checked + .toggle-slider::before {
+    transform: translateX(24px);
 }

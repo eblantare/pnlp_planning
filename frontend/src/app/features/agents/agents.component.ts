@@ -1,11 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ButtonModule } from 'primeng/button';           // ✅ AJOUT
-import { TooltipModule } from 'primeng/tooltip';         // ✅ AJOUT
+import { ButtonModule } from 'primeng/button';
+import { TooltipModule } from 'primeng/tooltip';
 import { AgentService, Agent, CreateAgentRequest } from '../../core/services/agent.service';
 import { ExportService } from '../../core/services/export.service';
 import { ActionButton, ActionButtonsComponent } from '../../shared/components/action-buttons/action-buttons.component';
+import { PermissionService } from '../../core/services/permission.service';
+import { HasPermissionDirective } from '../../shared/directives/has-permission.directive';
 
 @Component({
     selector: 'app-agents',
@@ -13,9 +15,10 @@ import { ActionButton, ActionButtonsComponent } from '../../shared/components/ac
     imports: [
         CommonModule,
         FormsModule,
-        ButtonModule,             // ✅ AJOUT
-        TooltipModule,            // ✅ AJOUT
-        ActionButtonsComponent
+        ButtonModule,
+        TooltipModule,
+        ActionButtonsComponent,
+        HasPermissionDirective     // ✅ AJOUT
     ],
     templateUrl: './agents.component.html',
     styleUrls: ['./agents.component.css']
@@ -60,7 +63,8 @@ export class AgentsComponent implements OnInit {
 
     constructor(
         private agentService: AgentService,
-        private exportService: ExportService
+        private exportService: ExportService,
+        public permissionService: PermissionService   // ✅ AJOUT
     ) { }
 
     ngOnInit(): void {
@@ -313,8 +317,10 @@ export class AgentsComponent implements OnInit {
         });
     }
 
-    // ✅ NOUVEAU : Actions pour un agent
+    // ✅ Actions avec permissions
     getActionsFor(agent: Agent): ActionButton[] {
+        const peutCrud = this.permissionService.peutCrudAgents();   // ✅ AJOUT
+
         return [
             {
                 id: 'view',
@@ -326,21 +332,22 @@ export class AgentsComponent implements OnInit {
                 id: 'toggle',
                 icon: agent.actif ? 'pi pi-lock' : 'pi pi-lock-open',
                 label: agent.actif ? 'Désactiver' : 'Activer',
-                severity: agent.actif ? 'danger' : 'success'
+                severity: agent.actif ? 'danger' : 'success',
+                show: peutCrud    // ✅ Conditionnel
             },
             {
                 id: 'edit',
                 icon: 'pi pi-pencil',
                 label: 'Modifier',
                 severity: 'warning',
-                show: !agent.actif   // Modifier seulement si INACTIF
+                show: peutCrud && !agent.actif
             },
             {
                 id: 'delete',
                 icon: 'pi pi-trash',
                 label: 'Désactiver',
                 severity: 'danger',
-                show: !agent.actif   // Supprimer seulement si INACTIF
+                show: peutCrud && !agent.actif
             }
         ];
     }
