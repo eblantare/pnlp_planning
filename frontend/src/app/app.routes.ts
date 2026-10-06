@@ -1,17 +1,31 @@
 import { Routes } from '@angular/router';
 import { authGuard, roleGuard } from './core/guards/auth.guard';
 import { permissionGuard } from './core/guards/permission.guard';
+
 export const routes: Routes = [
+    // ============================================================
     // ROUTES PUBLIQUES
+    // ============================================================
     {
         path: 'login',
         loadComponent: () => import('./features/auth/login/login.component')
             .then(m => m.LoginComponent)
     },
-    // ... (forgot-password, reset-password inchangés) ...
+    // ✅ RESTAURÉ : Mot de passe oublié
+    {
+        path: 'forgot-password',
+        loadComponent: () => import('./features/auth/forgot-password/forgot-password.component')
+            .then(m => m.ForgotPasswordComponent)
+    },
+    // ✅ RESTAURÉ : Réinitialisation avec token
+    {
+        path: 'reset-password',
+        loadComponent: () => import('./features/auth/reset-password/reset-password.component')
+            .then(m => m.ResetPasswordComponent)
+    },
 
     // ============================================================
-    // ROUTES PROTÉGÉES AVEC PERMISSIONS
+    // ROUTES PROTÉGÉES
     // ============================================================
     {
         path: 'dashboard',
@@ -19,6 +33,14 @@ export const routes: Routes = [
         data: { menu: 'DASHBOARD' },
         loadComponent: () => import('./features/dashboard/dashboard.component')
             .then(m => m.DashboardComponent)
+    },
+    // ✅ IMPORTANT : routes planning/validation AVANT planning
+    {
+        path: 'planning/validation',
+        canActivate: [authGuard, permissionGuard],
+        data: { menu: 'VALIDATION' },
+        loadComponent: () => import('./features/planning/validation-conflits/validation-conflits.component')
+            .then(m => m.ValidationConflitsComponent)
     },
     {
         path: 'planning',
@@ -56,7 +78,9 @@ export const routes: Routes = [
             .then(m => m.ProfilsComponent)
     },
 
+    // ============================================================
     // ACCÈS REFUSÉ
+    // ============================================================
     {
         path: 'acces-refuse',
         canActivate: [authGuard],
@@ -64,7 +88,9 @@ export const routes: Routes = [
             .then(m => m.AccesRefuseComponent)
     },
 
+    // ============================================================
     // REDIRECTIONS
+    // ============================================================
     { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     { path: '**', redirectTo: 'login' }
 ];

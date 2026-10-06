@@ -28,6 +28,7 @@ public class PlanningService {
     private final ConflictService conflictService;
     private final FileStorageService fileStorageService;
     private final EmailService emailService;
+    private final NotificationService notificationService;
 
     private Integer calculerNombreJours(ActiviteDTO dto) {
         if (dto.getDateDebut() == null || dto.getDateFin() == null) {
@@ -104,10 +105,55 @@ public class PlanningService {
         if (!agentIds.isEmpty() && !estAuProgramme && statutInitial != Activite.StatutActivite.BROUILLON) {
             conflits = detecterConflits(activite, agentIds, agentIdsForces);
         }
+        // Dans creerActivite, après :
+//   List<ConflitAgentDTO> conflits = new ArrayList<>();
+//   if (!agentIds.isEmpty() && !estAuProgramme && statutInitial != BROUILLON) {
+//       conflits = detecterConflits(...);
+//   }
+
         if (!conflits.isEmpty()) {
+            // ✅ NOUVEAU : sauvegarder en attente de validation N1
+            Activite.StatutActivite statutCible = (dto.getStatut() != null
+                    && dto.getStatut().equalsIgnoreCase("PLANIFIEE"))
+                    ? Activite.StatutActivite.EN_ATTENTE_VALIDATION
+                    : statutInitial;
+
+            activite.setStatut(statutCible);
+            if (statutCible == Activite.StatutActivite.EN_ATTENTE_VALIDATION) {
+                activite.setNiveauValidationActuel(1);
+            }
+            activite = activiteRepository.save(activite);
+
+            // Créer les affectations en marquant celles en conflit
+            Set<UUID> agentIdsEnConflit = conflits.stream()
+                    .map(ConflitAgentDTO::getAgentId)
+                    .collect(java.util.stream.Collectors.toSet());
+
+            if (!agentIds.isEmpty()) {
+                for (UUID agentId : agentIds) {
+                    Agent agent = agentRepository.findById(agentId).orElseThrow();
+                    if (!Boolean.TRUE.equals(agent.getActif())) continue;
+
+                    String zone = agentZones.get(agentId);
+                    Affectation aff = Affectation.builder()
+                            .agent(agent).activite(activite).zoneAffectation(zone)
+                            .enConflit(agentIdsEnConflit.contains(agentId))
+                            .actionValidation(agentIdsEnConflit.contains(agentId)
+                                    ? Affectation.ActionValidation.EN_ATTENTE : null)
+                            .build();
+                    affectationRepository.save(aff);
+                }
+            }
+
+            // Notifier le validateur N1
+            notificationService.notifierValidateur(activite, 1);
+
+            List<Affectation> affectations = affectationRepository.findByActiviteIdWithAgent(activite.getId());
             return ReponseCreationActiviteDTO.builder()
-                    .succes(false).conflits(conflits)
-                    .message("Conflits détectés. Veuillez confirmer ou retirer les agents concernés.")
+                    .succes(true)
+                    .activite(convertToDTOWithAffectations(activite, affectations))
+                    .conflits(conflits)
+                    .message("Activité soumise à validation  (conflits détectés).")
                     .build();
         }
 
@@ -396,10 +442,54 @@ public class PlanningService {
         if (!agentIds.isEmpty() && !estAuProgramme && nouveauStatut != Activite.StatutActivite.BROUILLON) {
             conflits = detecterConflits(activite, agentIds, agentIdsForces);
         }
+
         if (!conflits.isEmpty()) {
+            // ✅ NOUVEAU : sauvegarder en attente de validation
+            Activite.StatutActivite statutCible = (dto.getStatut() != null
+                    && dto.getStatut().equalsIgnoreCase("PLANIFIEE"))
+                    ? Activite.StatutActivite.EN_ATTENTE_VALIDATION
+                    : nouveauStatut;   // ✅ CORRIGÉ : nouveauStatut au lieu de statutInitial
+
+            activite.setStatut(statutCible);
+            if (statutCible == Activite.StatutActivite.EN_ATTENTE_VALIDATION) {
+                activite.setNiveauValidationActuel(1);
+            }
+            activite = activiteRepository.save(activite);
+
+            // Supprimer les anciennes affectations pour recréer proprement
+            affectationRepository.deleteByActiviteId(id);
+            affectationRepository.flush();
+
+            // Créer les affectations en marquant celles en conflit
+            Set<UUID> agentIdsEnConflit = conflits.stream()
+                    .map(ConflitAgentDTO::getAgentId)
+                    .collect(java.util.stream.Collectors.toSet());
+
+            if (!agentIds.isEmpty()) {
+                for (UUID agentId : agentIds) {
+                    Agent agent = agentRepository.findById(agentId).orElseThrow();
+                    if (!Boolean.TRUE.equals(agent.getActif())) continue;
+
+                    String zone = agentZones.get(agentId);
+                    Affectation aff = Affectation.builder()
+                            .agent(agent).activite(activite).zoneAffectation(zone)
+                            .enConflit(agentIdsEnConflit.contains(agentId))
+                            .actionValidation(agentIdsEnConflit.contains(agentId)
+                                    ? Affectation.ActionValidation.EN_ATTENTE : null)
+                            .build();
+                    affectationRepository.save(aff);
+                }
+            }
+
+            // Notifier le validateur N1
+            notificationService.notifierValidateur(activite, 1);
+
+            List<Affectation> affectations = affectationRepository.findByActiviteIdWithAgent(activite.getId());
             return ReponseCreationActiviteDTO.builder()
-                    .succes(false).conflits(conflits)
-                    .message("Conflits détectés. Veuillez confirmer ou retirer les agents concernés.")
+                    .succes(true)
+                    .activite(convertToDTOWithAffectations(activite, affectations))
+                    .conflits(conflits)
+                    .message("Activité soumise à validation (conflits détectés).")
                     .build();
         }
 
@@ -926,6 +1016,7 @@ public class PlanningService {
         List<UUID> agentIds = new ArrayList<>();
         List<String> agentNoms = new ArrayList<>();
         List<String> agentZonesList = new ArrayList<>();
+        List<ConflitAgentDTO> conflits = new ArrayList<>();
 
         if (affectations != null) {
             for (Affectation aff : affectations) {
@@ -933,6 +1024,24 @@ public class PlanningService {
                     agentIds.add(aff.getAgent().getId());
                     agentNoms.add(aff.getAgent().getNomComplet());
                     agentZonesList.add(aff.getZoneAffectation());
+                }
+
+                if (Boolean.TRUE.equals(aff.getEnConflit())) {
+                    conflits.add(ConflitAgentDTO.builder()
+                            .agentId(aff.getAgent().getId())
+                            .agentNom(aff.getAgent().getNom())
+                            .agentPrenom(aff.getAgent().getPrenom())
+                            .agentPoste(aff.getAgent().getPoste())
+                            .affectationId(aff.getId())
+                            .actionValidation(aff.getActionValidation() != null
+                                    ? aff.getActionValidation().name() : "EN_ATTENTE")
+                            .agentRemplacantId(aff.getAgentRemplacant() != null
+                                    ? aff.getAgentRemplacant().getId() : null)
+                            .agentRemplacantNom(aff.getAgentRemplacant() != null
+                                    ? aff.getAgentRemplacant().getNomComplet() : null)
+                            .force(aff.getForce())
+                            .motifConflit(aff.getMotifConflit())
+                            .build());
                 }
             }
         }
@@ -946,13 +1055,17 @@ public class PlanningService {
                 .nombreJours(activite.getNombreJours())
                 .lieu(activite.getLieu())
                 .sourceFinancement(activite.getSourceFinancement())
-                .typeLieu(activite.getTypeLieu() != null
-                        ? activite.getTypeLieu().name() : null)
+                .typeLieu(activite.getTypeLieu() != null ? activite.getTypeLieu().name() : null)
                 .auProgramme(activite.getAuProgramme())
                 .statut(activite.getStatut().name())
+                // ✅ CRITIQUE : sans ces 3 champs, le validateur N2 ne voit rien
+                .niveauValidationActuel(activite.getNiveauValidationActuel())
+                .valideParNiveau(activite.getValideParNiveau())
+                .renvoyeParNiveau(activite.getRenvoyeParNiveau())
                 .agentIds(agentIds)
                 .agentNoms(agentNoms)
                 .agentZonesList(agentZonesList)
+                .conflits(conflits)
                 .tdrFilename(activite.getTdrFilename())
                 .tdrUploadedAt(activite.getTdrUploadedAt())
                 .tdrConforme(activite.getTdrConforme())

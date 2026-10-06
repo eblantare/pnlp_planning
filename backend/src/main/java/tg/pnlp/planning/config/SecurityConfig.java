@@ -23,6 +23,9 @@ import java.util.List;
 import static tg.pnlp.planning.security.ProfilCodeNormalizer.ADMIN;
 import static tg.pnlp.planning.security.ProfilCodeNormalizer.SUPER_ADMIN;
 import static tg.pnlp.planning.security.ProfilCodeNormalizer.PLANIFICATEUR;
+import static tg.pnlp.planning.security.ProfilCodeNormalizer.VALIDATEUR_NIVEAU_1;
+import static tg.pnlp.planning.security.ProfilCodeNormalizer.VALIDATEUR_NIVEAU_2;
+import static tg.pnlp.planning.security.ProfilCodeNormalizer.VALIDATEUR_NIVEAU_3;
 
 @Configuration
 @EnableWebSecurity
@@ -46,30 +49,37 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
 
                         // ============================================================
-                        // ENDPOINTS PUBLICS (pas d'authentification)
+                        // ENDPOINTS PUBLICS
                         // ============================================================
                         .requestMatchers("/auth/login").permitAll()
                         .requestMatchers("/auth/logout").permitAll()
                         .requestMatchers("/auth/register").permitAll()
                         .requestMatchers("/auth/password/**").permitAll()
 
-                        // Swagger
                         .requestMatchers(
                                 "/swagger-ui/**", "/swagger-ui.html",
                                 "/v3/api-docs/**", "/swagger-resources/**", "/webjars/**"
                         ).permitAll()
 
-                        // CORS preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                         // ============================================================
-                        // PERMISSIONS DE L'UTILISATEUR → tout authentifié
+                        // PERMISSIONS
                         // ============================================================
                         .requestMatchers("/permissions/**").authenticated()
 
                         // ============================================================
-                        // ✅ LECTURE : accessible à TOUS les authentifiés
-                        //    (nécessaire pour le Dashboard et la page Planning)
+                        // ✅ VALIDATION — DOIT ÊTRE AVANT /planning/**
+                        // URLs : /planning/validation/**
+                        // ============================================================
+                        .requestMatchers(HttpMethod.GET, "/planning/validation/**")
+                        .hasAnyRole(SUPER_ADMIN, ADMIN, VALIDATEUR_NIVEAU_1, VALIDATEUR_NIVEAU_2, VALIDATEUR_NIVEAU_3)
+
+                        .requestMatchers(HttpMethod.POST, "/planning/validation/**")
+                        .hasAnyRole(SUPER_ADMIN, ADMIN, VALIDATEUR_NIVEAU_1, VALIDATEUR_NIVEAU_2, VALIDATEUR_NIVEAU_3)
+
+                        // ============================================================
+                        // ✅ LECTURE PLANNING : tous les authentifiés
                         // ============================================================
                         .requestMatchers(HttpMethod.GET, "/planning/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/activites/**").authenticated()
@@ -80,7 +90,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/statistiques/**").authenticated()
 
                         // ============================================================
-                        // 🟥 ÉCRITURE PLANNING : SUPER_ADMIN, ADMIN, PLANIFICATEUR
+                        // 🟥 ÉCRITURE PLANNING
                         // ============================================================
                         .requestMatchers(HttpMethod.POST, "/planning/**")
                         .hasAnyRole(SUPER_ADMIN, ADMIN, PLANIFICATEUR)
@@ -95,7 +105,7 @@ public class SecurityConfig {
                         .hasAnyRole(SUPER_ADMIN, ADMIN, PLANIFICATEUR)
 
                         // ============================================================
-                        // 🟥 ÉCRITURE AGENTS : SUPER_ADMIN ou ADMIN
+                        // 🟥 ÉCRITURE AGENTS
                         // ============================================================
                         .requestMatchers(HttpMethod.POST, "/agents/**")
                         .hasAnyRole(SUPER_ADMIN, ADMIN)
@@ -110,7 +120,7 @@ public class SecurityConfig {
                         .hasAnyRole(SUPER_ADMIN, ADMIN)
 
                         // ============================================================
-                        // 🟥 PROFILS : écriture = SUPER_ADMIN uniquement
+                        // 🟥 PROFILS
                         // ============================================================
                         .requestMatchers(HttpMethod.POST, "/profils/**").hasRole(SUPER_ADMIN)
                         .requestMatchers(HttpMethod.PUT, "/profils/**").hasRole(SUPER_ADMIN)
@@ -118,12 +128,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/profils/**").hasRole(SUPER_ADMIN)
 
                         // ============================================================
-                        // 🟥 UTILISATEURS : SUPER_ADMIN uniquement
+                        // 🟥 UTILISATEURS
                         // ============================================================
                         .requestMatchers("/utilisateurs/**").hasRole(SUPER_ADMIN)
 
                         // ============================================================
-                        // ✅ Tout le reste : authentifié
+                        // ✅ Tout le reste
                         // ============================================================
                         .anyRequest().authenticated()
                 )

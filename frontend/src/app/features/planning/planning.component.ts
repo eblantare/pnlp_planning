@@ -5,7 +5,9 @@ import {
     PlanningService,
     Activite,
     PlanningMensuel,
-    ConflitAgent
+    ConflitAgent,
+    ValidationConflit,
+    DecisionValidation
 } from '../../core/services/planning.service';
 import { AgentService, Agent } from '../../core/services/agent.service';
 import { ExportService } from '../../core/services/export.service';
@@ -20,6 +22,22 @@ interface ZoneGroup {
     region: string;
     districts: Set<string>;
     agentIds: string[];
+}
+
+interface ConflitEditable {
+    affectationId: string;
+    agentId: string;
+    agentNom: string;
+    agentPrenom: string;
+    agentPoste?: string;
+    typeConflit: string;
+    activiteConflit?: string;
+    dateDebut?: string;
+    dateFin?: string;
+    motif?: string;
+    action: 'EN_ATTENTE' | 'RETIRER' | 'REMPLACER' | 'FORCER';
+    agentRemplacantId?: string;
+    agentRemplacantNom?: string;
 }
 
 @Component({
@@ -85,9 +103,23 @@ export class PlanningComponent implements OnInit {
     selectedActivite: Activite | null = null;
 
     conflitsDetectes: ConflitAgent[] = [];
-    agentsForces: Set<string> = new Set();
     activiteEnAttente: Activite | null = null;
 
+    // ============================================================
+    // ✅ NOUVEAU : Modal de traitement des conflits par le validateur
+    // ============================================================
+    showValidationModal = false;
+    activiteEnValidation: Activite | null = null;
+    conflitsAValider: ConflitEditable[] = [];
+    commentaireValidation = '';
+    isLoadingValidation = false;
+
+    // ✅ Remplaçants dans le modal de validation
+    remplacantsValidation: Agent[] = [];
+    isLoadingRemplacantsValidation = false;
+    indexRemplacantValidationEnCours: number | null = null;
+
+    // Modal remplacement (formulaire planificateur)
     slotsARemplacer: { [groupIndex: number]: { district: string }[] } = {};
     remplacementEnCours: { groupIndex: number; slotIndex: number } | null = null;
     remplacantsDisponibles: Agent[] = [];
@@ -149,6 +181,22 @@ export class PlanningComponent implements OnInit {
 
     estCloture(statut?: string): boolean {
         return statut === 'TERMINEE' || statut === 'ANNULEE' || statut === 'REPORTEE';
+    }
+
+    estEnAttenteValidation(statut?: string): boolean {
+        return statut === 'EN_ATTENTE_VALIDATION' || statut === 'RENVOYE_POUR_CORRECTION';
+    }
+
+    // ============================================================
+    // ✅ NOUVEAU : Vérifie si l'utilisateur peut traiter les conflits
+    //             d'une activité donnée (validateur du bon niveau ou SUPER_ADMIN)
+    // ============================================================
+    peutTraiterConflits(activite: Activite): boolean {
+        if (!activite || activite.statut !== 'EN_ATTENTE_VALIDATION') return false;
+        const niveauUtilisateur = this.permissionService.getNiveauValidation();
+        if (niveauUtilisateur === null) return false;
+        if (niveauUtilisateur === -1) return true;
+        return niveauUtilisateur === (activite.niveauValidationActuel || 1);
     }
 
     toggleAuProgramme(activite: Activite, event: any): void {
@@ -224,8 +272,14 @@ export class PlanningComponent implements OnInit {
 
     trierActivites(activites: Activite[]): Activite[] {
         const ordreStatut: { [key: string]: number } = {
-            'BROUILLON': 1, 'PLANIFIEE': 2, 'EN_COURS': 3,
-            'REPORTEE': 4, 'TERMINEE': 5, 'ANNULEE': 6
+            'BROUILLON': 1,
+            'RENVOYE_POUR_CORRECTION': 2,
+            'EN_ATTENTE_VALIDATION': 3,
+            'PLANIFIEE': 4,
+            'EN_COURS': 5,
+            'REPORTEE': 6,
+            'TERMINEE': 7,
+            'ANNULEE': 8
         };
 
         return [...activites].sort((a, b) => {
@@ -451,9 +505,6 @@ export class PlanningComponent implements OnInit {
         this.zoneGroups = [];
         this.slotsARemplacer = {};
         this.searchAgentByGroup = {};
-        this.conflitsDetectes = [];
-        this.agentsForces.clear();
-        this.activiteEnAttente = null;
     }
 
     calculerNombreJours(): void {
@@ -628,12 +679,6 @@ export class PlanningComponent implements OnInit {
         return { region, districts };
     }
 
-    /**
-     * ✅ CORRECTION :
-     *   - Participants OBLIGATOIRES dans tous les cas (y compris au programme).
-     *   - Lieu / financement / TDR / OM : uniquement hors programme.
-     *   - Les zones restent optionnelles (comportement inchangé).
-     */
     creerActivite(): void {
         if (!this.nouvelleActivite.titre) {
             this.showError('Le titre est obligatoire');
@@ -649,12 +694,10 @@ export class PlanningComponent implements OnInit {
             if (!this.nouvelleActivite.dateDebut) erreurs.push('la date de début');
             if (!this.nouvelleActivite.dateFin) erreurs.push('la date de fin');
 
-            // ✅ Participants obligatoires dans TOUS les cas
             if (this.getTotalSelectedAgents() === 0) {
                 erreurs.push('au moins un participant');
             }
 
-            // ✅ Si NON au programme : lieu + financement + documents obligatoires
             if (!estAuProgramme) {
                 if (!this.nouvelleActivite.lieu) erreurs.push('le lieu');
                 if (!this.nouvelleActivite.sourceFinancement) erreurs.push('la source de financement');
@@ -680,10 +723,7 @@ export class PlanningComponent implements OnInit {
             }
         }
 
-        // ✅ Participants conservés même au programme
         const allAgentIds = isBrouillon ? [] : this.buildAllAgentIds();
-
-        // ✅ Zones uniquement hors programme (au programme : pas de zone significative)
         const agentZones = (isBrouillon || estAuProgramme) ? {} : this.buildAgentZones();
 
         const activiteFinale: Activite = {
@@ -702,6 +742,14 @@ export class PlanningComponent implements OnInit {
             this.planningService.updateActivite(idActivite, activiteFinale).subscribe({
                 next: (reponse) => {
                     if (reponse.succes) {
+                        if (this.estEnAttenteValidation(reponse.activite?.statut)) {
+                            this.conflitsDetectes = reponse.conflits || [];
+                            this.activiteEnAttente = reponse.activite || null;
+                            this.closeForm();
+                            this.showConflitModal = true;
+                            this.isLoading = false;
+                            return;
+                        }
                         this.uploaderFichiersEtFinaliser(idActivite, 'Activité modifiée');
                     } else {
                         this.conflitsDetectes = reponse.conflits;
@@ -724,6 +772,16 @@ export class PlanningComponent implements OnInit {
                             this.mois = dateDebut.getMonth() + 1;
                             this.annee = dateDebut.getFullYear();
                         }
+
+                        if (this.estEnAttenteValidation(reponse.activite?.statut)) {
+                            this.conflitsDetectes = reponse.conflits || [];
+                            this.activiteEnAttente = reponse.activite || null;
+                            this.closeForm();
+                            this.showConflitModal = true;
+                            this.isLoading = false;
+                            return;
+                        }
+
                         this.uploaderFichiersEtFinaliser(reponse.activite.id, 'Activité créée');
                     } else if (reponse.succes) {
                         this.showSuccess('Activité créée');
@@ -747,7 +805,6 @@ export class PlanningComponent implements OnInit {
     }
 
     private uploaderFichiersEtFinaliser(activiteId: string, messageSucces: string): void {
-        // ✅ Si au programme : aucun fichier à uploader
         if (this.isAuProgramme()) {
             this.showSuccess(messageSucces);
             this.closeForm();
@@ -801,59 +858,39 @@ export class PlanningComponent implements OnInit {
         });
     }
 
-    toggleAgentForce(agentId: string): void {
-        if (this.agentsForces.has(agentId)) {
-            this.agentsForces.delete(agentId);
-        } else {
-            this.agentsForces.add(agentId);
-        }
-    }
-
-    isAgentForce(agentId: string): boolean {
-        return this.agentsForces.has(agentId);
-    }
-
     closeConflitModal(): void {
         this.showConflitModal = false;
         this.conflitsDetectes = [];
-        this.agentsForces.clear();
         this.activiteEnAttente = null;
     }
 
-    retirerAgentConflit(agentId: string): void {
-        let groupIndex = -1;
-        let group: ZoneGroup | null = null;
+    confirmerSoumissionValidation(): void {
+        this.showSuccess('✅ Activité soumise à validation. Vous serez notifié dès qu\'elle sera traitée.');
+        this.closeConflitModal();
+        this.loadPlanning();
+        this.refreshService.demanderRafraichissement();
+    }
 
-        for (let i = 0; i < this.zoneGroups.length; i++) {
-            if (this.zoneGroups[i].agentIds.includes(agentId)) {
-                groupIndex = i;
-                group = this.zoneGroups[i];
-                break;
+    annulerSoumissionValidation(): void {
+        if (!this.activiteEnAttente?.id) return;
+        if (!confirm(
+            'Annuler la soumission ? L\'activité repassera en Brouillon et les participants seront retirés.'
+        )) return;
+
+        this.isLoading = true;
+        this.planningService.changerStatut(this.activiteEnAttente.id, 'BROUILLON').subscribe({
+            next: () => {
+                this.showSuccess('↩️ Soumission annulée. Activité repassée en Brouillon.');
+                this.closeConflitModal();
+                this.loadPlanning();
+                this.refreshService.demanderRafraichissement();
+                this.isLoading = false;
+            },
+            error: (err) => {
+                this.showError(err.error?.message || 'Erreur lors de l\'annulation');
+                this.isLoading = false;
             }
-        }
-
-        if (group && groupIndex > -1) {
-            group.agentIds = group.agentIds.filter(id => id !== agentId);
-            if (!this.slotsARemplacer[groupIndex]) {
-                this.slotsARemplacer[groupIndex] = [];
-            }
-            this.slotsARemplacer[groupIndex].push({ district: '' });
-            this.showSuccess(
-                `${group.agentIds.length} participant(s) restant(s). ` +
-                `Un slot de remplacement est disponible dans la zone ${groupIndex + 1}.`
-            );
-        }
-
-        this.nouvelleActivite.agentIds = (this.nouvelleActivite.agentIds || [])
-            .filter(id => id !== agentId);
-
-        if (this.activiteEnAttente) {
-            this.activiteEnAttente.agentIds = (this.activiteEnAttente.agentIds || [])
-                .filter(id => id !== agentId);
-        }
-
-        this.conflitsDetectes = this.conflitsDetectes.filter(c => c.agentId !== agentId);
-        this.agentsForces.delete(agentId);
+        });
     }
 
     supprimerSlot(groupIndex: number, slotIndex: number): void {
@@ -918,84 +955,21 @@ export class PlanningComponent implements OnInit {
         this.remplacantsDisponibles = [];
     }
 
-    confirmerAvecForcage(): void {
-        if (!this.activiteEnAttente) return;
-
-        const agentIdsActuels = this.buildAllAgentIds();
-        const agentZones = this.buildAgentZones();
-
-        const activiteForcee: Activite = {
-            ...this.activiteEnAttente,
-            agentIds: agentIdsActuels,
-            agentIdsForces: Array.from(this.agentsForces),
-            agentZones: agentZones
-        };
-
-        this.isLoading = true;
-
-        if (this.editingActivite && this.editingActivite.id) {
-            this.planningService.updateActivite(this.editingActivite.id, activiteForcee).subscribe({
-                next: (reponse) => {
-                    if (reponse.succes) {
-                        this.showSuccess('Activité modifiée malgré les conflits');
-                        this.closeConflitModal();
-                        this.closeForm();
-                        this.loadPlanning();
-                        this.refreshService.demanderRafraichissement();
-                    } else {
-                        this.conflitsDetectes = reponse.conflits;
-                        this.showError(reponse.message);
-                    }
-                    this.isLoading = false;
-                },
-                error: (err) => {
-                    this.showError(err.error?.message || 'Erreur modification');
-                    this.isLoading = false;
-                }
-            });
-        } else {
-            this.planningService.creerActivite(activiteForcee).subscribe({
-                next: (reponse) => {
-                    if (reponse.succes) {
-                        const dateDebut = this.parseLocalDate(reponse.activite?.dateDebut);
-                        if (dateDebut) {
-                            this.mois = dateDebut.getMonth() + 1;
-                            this.annee = dateDebut.getFullYear();
-                        }
-                        this.showSuccess('Activité créée malgré les conflits');
-                        this.closeConflitModal();
-                        this.closeForm();
-                        this.loadPlanning();
-                        this.refreshService.demanderRafraichissement();
-                    } else {
-                        this.conflitsDetectes = reponse.conflits;
-                        this.showError(reponse.message);
-                    }
-                    this.isLoading = false;
-                },
-                error: (err) => {
-                    this.showError(err.error?.message || 'Erreur création');
-                    this.isLoading = false;
-                }
-            });
-        }
-    }
-
-    /**
-     * ✅ CORRECTION : validation adaptée selon `auProgramme`.
-     *    - Participants obligatoires dans tous les cas.
-     *    - TDR/lieu/financement uniquement hors programme.
-     *    - OM uniquement hors programme.
-     */
     changerStatutDirect(activite: Activite, nouveauStatut: string): void {
         if (!activite.id) return;
         if (activite.statut === nouveauStatut) return;
 
-        // PLANIFIEE → EN_COURS
+        if (this.estEnAttenteValidation(activite.statut)) {
+            this.showError(
+                'Cette activité est en attente de validation. Seul un validateur peut la traiter.'
+            );
+            this.loadPlanning();
+            return;
+        }
+
         if (activite.statut === 'PLANIFIEE' && nouveauStatut === 'EN_COURS') {
             const erreurs: string[] = [];
 
-            // ✅ OM requis uniquement hors programme
             if (!activite.auProgramme) {
                 if (!activite.ordreMissionFilename) {
                     erreurs.push('l\'Ordre de Mission');
@@ -1016,19 +990,16 @@ export class PlanningComponent implements OnInit {
             }
         }
 
-        // BROUILLON → PLANIFIEE
         if (activite.statut === 'BROUILLON' && nouveauStatut === 'PLANIFIEE') {
             const erreurs: string[] = [];
 
             if (!activite.dateDebut) erreurs.push('la date de début');
             if (!activite.dateFin) erreurs.push('la date de fin');
 
-            // ✅ Participants obligatoires dans tous les cas
             if (!activite.agentIds || activite.agentIds.length === 0) {
                 erreurs.push('au moins un participant');
             }
 
-            // ✅ Lieu/financement/TDR uniquement hors programme
             if (!activite.auProgramme) {
                 if (!activite.lieu) erreurs.push('le lieu');
                 if (!activite.sourceFinancement) erreurs.push('la source de financement');
@@ -1194,6 +1165,8 @@ export class PlanningComponent implements OnInit {
     getStatutLabel(statut?: string): string {
         const labels: { [key: string]: string } = {
             'BROUILLON': 'Brouillon',
+            'EN_ATTENTE_VALIDATION': 'En attente de validation',
+            'RENVOYE_POUR_CORRECTION': 'Renvoyé pour correction',
             'PLANIFIEE': 'Planifiée',
             'EN_COURS': 'En cours',
             'TERMINEE': 'Terminée',
@@ -1206,6 +1179,8 @@ export class PlanningComponent implements OnInit {
     getStatutClass(statut?: string): string {
         const classes: { [key: string]: string } = {
             'BROUILLON': 'badge-brouillon',
+            'EN_ATTENTE_VALIDATION': 'badge-attente-validation',
+            'RENVOYE_POUR_CORRECTION': 'badge-renvoye-correction',
             'PLANIFIEE': 'badge-planifiee',
             'EN_COURS': 'badge-en-cours',
             'TERMINEE': 'badge-terminee',
@@ -1250,27 +1225,44 @@ export class PlanningComponent implements OnInit {
         const estCloture =
             statut === 'TERMINEE' || statut === 'ANNULEE' || statut === 'REPORTEE';
 
-        // ✅ Actions de renvoi de documents uniquement si PAS au programme
+        const enValidation = this.estEnAttenteValidation(statut);
+
         const peutRenvoyerTdr =
-            peutCrud && !activite.auProgramme && !estCloture &&
+            peutCrud && !activite.auProgramme && !estCloture && !enValidation &&
             statut !== 'BROUILLON' && !!activite.tdrFilename;
 
         const peutRenvoyerOm =
             peutCrud && !activite.auProgramme && statut === 'EN_COURS' &&
             !!activite.ordreMissionFilename;
 
+        // ✅ CORRIGÉ : RENVOYE_POUR_CORRECTION doit être modifiable par le planificateur
         const modifiable =
-            peutCrud && (statut === 'PLANIFIEE' || statut === 'BROUILLON');
+            peutCrud && (
+                statut === 'BROUILLON'
+                || statut === 'PLANIFIEE'
+                || statut === 'RENVOYE_POUR_CORRECTION'   // ✅ AJOUTÉ
+            );
 
-        const actions: ActionButton[] = [
-            {
-                id: 'view',
-                icon: 'pi pi-eye',
-                label: 'Voir détails',
-                title: 'Voir les détails de l\'activité',
-                severity: 'info'
-            }
-        ];
+        const actions: ActionButton[] = [];
+
+        // ✅ NOUVEAU : bouton "Traiter les conflits" pour les validateurs du bon niveau
+        if (this.peutTraiterConflits(activite)) {
+            actions.push({
+                id: 'traiter-conflits',
+                icon: 'pi pi-exclamation-triangle',
+                label: 'Traiter les conflits',
+                title: `${activite.conflits?.length || 0} conflit(s) à traiter - cliquez pour ouvrir`,
+                severity: 'warning'
+            });
+        }
+
+        actions.push({
+            id: 'view',
+            icon: 'pi pi-eye',
+            label: 'Voir détails',
+            title: 'Voir les détails de l\'activité',
+            severity: 'info'
+        });
 
         if (peutRenvoyerTdr) {
             actions.push({
@@ -1321,7 +1313,249 @@ export class PlanningComponent implements OnInit {
             case 'delete': this.deleteActivite(activite); break;
             case 'renvoyer-tdr': this.renvoyerTdr(activite); break;
             case 'renvoyer-om': this.renvoyerOrdreMission(activite); break;
+            case 'traiter-conflits': this.ouvrirValidation(activite); break;   // ✅ NOUVEAU
         }
+    }
+
+    // ============================================================
+    // ✅ NOUVEAU : WORKFLOW DE VALIDATION (modal intégré)
+    // ============================================================
+
+    ouvrirValidation(activite: Activite): void {
+        this.activiteEnValidation = activite;
+        this.commentaireValidation = '';
+        this.conflitsAValider = (activite.conflits || []).map(c => ({
+            affectationId: c.affectationId!,
+            agentId: c.agentId,
+            agentNom: c.agentNom,
+            agentPrenom: c.agentPrenom,
+            agentPoste: c.agentPoste,
+            typeConflit: c.typeConflit,
+            activiteConflit: c.activiteConflit,
+            dateDebut: c.dateDebut,
+            dateFin: c.dateFin,
+            motif: c.motif,
+            action: (c.actionValidation as any) || 'EN_ATTENTE',
+            agentRemplacantId: c.agentRemplacantId,
+            agentRemplacantNom: c.agentRemplacantNom
+        }));
+        this.showValidationModal = true;
+    }
+
+    fermerValidationModal(): void {
+        this.showValidationModal = false;
+        this.activiteEnValidation = null;
+        this.conflitsAValider = [];
+        this.commentaireValidation = '';
+        this.indexRemplacantValidationEnCours = null;
+        this.remplacantsValidation = [];
+    }
+
+    /**
+     * ✅ MODIFIÉ : clic sur une action déjà sélectionnée → désélectionne
+     * (revient à EN_ATTENTE).
+     */
+    setActionValidation(index: number, action: 'RETIRER' | 'REMPLACER' | 'FORCER'): void {
+        const c = this.conflitsAValider[index];
+        if (!c) return;
+
+        // ✅ Si on clique sur l'action déjà active → on annule la sélection
+        if (c.action === action) {
+            c.action = 'EN_ATTENTE';
+            c.agentRemplacantId = undefined;
+            c.agentRemplacantNom = undefined;
+            // Ferme la sélection de remplaçant si ouverte
+            if (this.indexRemplacantValidationEnCours === index) {
+                this.indexRemplacantValidationEnCours = null;
+                this.remplacantsValidation = [];
+            }
+            return;
+        }
+
+        // Sinon, on applique la nouvelle action
+        c.action = action;
+
+        if (action !== 'REMPLACER') {
+            c.agentRemplacantId = undefined;
+            c.agentRemplacantNom = undefined;
+            if (this.indexRemplacantValidationEnCours === index) {
+                this.indexRemplacantValidationEnCours = null;
+                this.remplacantsValidation = [];
+            }
+        } else {
+            // Ouvre directement la sélection du remplaçant
+            this.ouvrirSelectionRemplacant(index);
+        }
+    }
+
+    ouvrirSelectionRemplacant(index: number): void {
+        const c = this.conflitsAValider[index];
+        if (!c) return;
+
+        this.indexRemplacantValidationEnCours = index;
+        this.isLoadingRemplacantsValidation = true;
+        this.remplacantsValidation = [];
+
+        const debut = this.activiteEnValidation?.dateDebut || '';
+        const fin = this.activiteEnValidation?.dateFin || '';
+
+        this.planningService.trouverRemplacants(debut, fin).subscribe({
+            next: (agents) => {
+                const idsDejaPresents = new Set(this.conflitsAValider.map(x => x.agentId));
+                this.remplacantsValidation = agents.filter(a =>
+                    a.id && !idsDejaPresents.has(a.id)
+                );
+                this.isLoadingRemplacantsValidation = false;
+            },
+            error: (err) => {
+                console.error('Erreur chargement remplaçants validation', err);
+                this.isLoadingRemplacantsValidation = false;
+            }
+        });
+    }
+
+    choisirRemplacantValidation(agent: Agent): void {
+        if (this.indexRemplacantValidationEnCours === null) return;
+        const c = this.conflitsAValider[this.indexRemplacantValidationEnCours];
+        if (!c || !agent.id) return;
+
+        c.agentRemplacantId = agent.id;
+        c.agentRemplacantNom = `${agent.prenom} ${agent.nom}`;
+        c.action = 'REMPLACER';
+        this.indexRemplacantValidationEnCours = null;
+        this.remplacantsValidation = [];
+    }
+
+    annulerSelectionRemplacantValidation(): void {
+        this.indexRemplacantValidationEnCours = null;
+        this.remplacantsValidation = [];
+    }
+
+    tousConflitsTraites(): boolean {
+        if (this.conflitsAValider.length === 0) return true;
+        return this.conflitsAValider.every(c =>
+            c.action !== 'EN_ATTENTE'
+            && (c.action !== 'REMPLACER' || !!c.agentRemplacantId)
+        );
+    }
+
+    getNbConflitsRestants(): number {
+        return this.conflitsAValider.filter(c =>
+            c.action === 'EN_ATTENTE'
+            || (c.action === 'REMPLACER' && !c.agentRemplacantId)
+        ).length;
+    }
+
+    validerConflits(): void {
+        if (!this.activiteEnValidation?.id) return;
+        if (!this.tousConflitsTraites()) {   // ✅ Gardé pour Valider
+            this.showError('Veuillez traiter tous les conflits avant de valider');
+            return;
+        }
+
+        const actions: ValidationConflit[] = this.conflitsAValider.map(c => ({
+            affectationId: c.affectationId,
+            action: c.action as any,
+            agentRemplacantId: c.agentRemplacantId
+        }));
+
+        const decision: DecisionValidation = {
+            actions,
+            decision: 'VALIDER'
+        };
+
+        this.isLoadingValidation = true;
+        this.planningService.valider(this.activiteEnValidation.id, decision).subscribe({
+            next: () => {
+                this.showSuccess('✅ Activité validée avec succès');
+                this.fermerValidationModal();
+                this.loadPlanning();
+                this.refreshService.demanderRafraichissement();
+                this.isLoadingValidation = false;
+            },
+            error: (err) => {
+                this.showError(err.error?.message || 'Erreur lors de la validation');
+                this.isLoadingValidation = false;
+            }
+        });
+    }
+
+    renvoyerNiveauSuperieur(): void {
+        if (!this.activiteEnValidation?.id) return;
+        // ✅ MODIFIÉ : plus de vérification "tous conflits traités"
+        // On peut renvoyer au niveau supérieur même si rien n'est décidé.
+        if (!confirm('Renvoyer cette activité au niveau supérieur ?')) return;
+
+        const actions: ValidationConflit[] = this.conflitsAValider
+            .filter(c => c.action !== 'EN_ATTENTE')   // ✅ On n'envoie que les actions choisies
+            .map(c => ({
+                affectationId: c.affectationId,
+                action: c.action as any,
+                agentRemplacantId: c.agentRemplacantId
+            }));
+
+        const decision: DecisionValidation = {
+            actions,
+            decision: 'RENVOYER_NIVEAU_SUPERIEUR',
+            commentaire: this.commentaireValidation
+        };
+        this.isLoadingValidation = true;
+        this.planningService.valider(this.activiteEnValidation.id, decision).subscribe({
+            next: () => {
+                this.showSuccess('⬆️ Activité renvoyée au niveau supérieur');
+                this.fermerValidationModal();
+                this.loadPlanning();
+                this.refreshService.demanderRafraichissement();
+                this.isLoadingValidation = false;
+            },
+            error: (err) => {
+                this.showError(err.error?.message || 'Erreur lors du renvoi');
+                this.isLoadingValidation = false;
+            }
+        });
+    }
+
+    renvoyerAuPlanificateur(): void {
+        if (!this.activiteEnValidation?.id) return;
+        if (!this.commentaireValidation || this.commentaireValidation.trim().length === 0) {
+            this.showError('Un commentaire est obligatoire pour renvoyer au planificateur');
+            return;
+        }
+        if (!confirm('Renvoyer cette activité au planificateur pour correction ?')) return;
+
+        const actions: ValidationConflit[] = this.conflitsAValider.map(c => ({
+            affectationId: c.affectationId,
+            action: c.action as any,
+            agentRemplacantId: c.agentRemplacantId
+        }));
+
+        const decision: DecisionValidation = {
+            actions,
+            decision: 'RENVOYER_PLANIFICATEUR',
+            commentaire: this.commentaireValidation
+        };
+
+        this.isLoadingValidation = true;
+        this.planningService.valider(this.activiteEnValidation.id, decision).subscribe({
+            next: () => {
+                this.showSuccess('↩️ Activité renvoyée au planificateur');
+                this.fermerValidationModal();
+                this.loadPlanning();
+                this.refreshService.demanderRafraichissement();
+                this.isLoadingValidation = false;
+            },
+            error: (err) => {
+                this.showError(err.error?.message || 'Erreur lors du renvoi');
+                this.isLoadingValidation = false;
+            }
+        });
+    }
+
+    getNiveauLabel(): string {
+        const n = this.permissionService.getNiveauValidation();
+        if (n === -1) return 'Super Admin';
+        if (n === 1 || n === 2 || n === 3) return `Validateur Niveau ${n}`;
+        return 'Validateur';
     }
 
     onTdrSelected(event: any): void {

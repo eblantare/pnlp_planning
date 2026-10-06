@@ -14,18 +14,19 @@ import java.util.UUID;
 public interface ActiviteRepository extends JpaRepository<Activite, UUID> {
 
     @Query("""
-        SELECT DISTINCT a FROM Activite a
-        WHERE
-            (a.dateDebut IS NOT NULL AND a.dateFin IS NOT NULL AND (
-                (a.dateDebut BETWEEN :debut AND :fin)
-                OR (a.dateFin BETWEEN :debut AND :fin)
-                OR (a.dateDebut <= :debut AND a.dateFin >= :fin)
-            ))
-            OR (a.dateDebut IS NULL)
-            OR (a.statut = tg.pnlp.planning.entity.Activite$StatutActivite.EN_COURS)
-            OR (a.statut = tg.pnlp.planning.entity.Activite$StatutActivite.EN_ATTENTE_VALIDATION)
-        ORDER BY a.dateDebut ASC NULLS LAST
-    """)
+    SELECT DISTINCT a FROM Activite a
+    WHERE
+        (a.dateDebut IS NOT NULL AND a.dateFin IS NOT NULL AND (
+            (a.dateDebut BETWEEN :debut AND :fin)
+            OR (a.dateFin BETWEEN :debut AND :fin)
+            OR (a.dateDebut <= :debut AND a.dateFin >= :fin)
+        ))
+        OR (a.dateDebut IS NULL)
+        OR (a.statut = tg.pnlp.planning.entity.Activite$StatutActivite.EN_COURS)
+        OR (a.statut = tg.pnlp.planning.entity.Activite$StatutActivite.EN_ATTENTE_VALIDATION)
+        OR (a.statut = tg.pnlp.planning.entity.Activite$StatutActivite.RENVOYE_POUR_CORRECTION)
+    ORDER BY a.dateDebut ASC NULLS LAST
+""")
     List<Activite> findByPeriode(@Param("debut") LocalDate debut, @Param("fin") LocalDate fin);
 
     @Query("""
@@ -109,4 +110,14 @@ public interface ActiviteRepository extends JpaRepository<Activite, UUID> {
      * Compteur pour le badge : nombre d'activités en attente pour un niveau.
      */
     long countByStatutAndNiveauValidationActuel(Activite.StatutActivite statut, Integer niveau);
+    @Query("""
+    SELECT DISTINCT a FROM Activite a
+    LEFT JOIN FETCH a.affectations aff
+    LEFT JOIN FETCH aff.agent
+    WHERE a.statut = tg.pnlp.planning.entity.Activite$StatutActivite.EN_ATTENTE_VALIDATION
+    ORDER BY a.createdAt ASC
+""")
+    List<Activite> findAllEnAttenteValidation();
+
+    long countByStatut(Activite.StatutActivite statut);
 }

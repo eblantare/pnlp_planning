@@ -63,6 +63,8 @@
                 <select [(ngModel)]="filterStatut" (change)="applyFilters()" class="form-control">
                     <option value="">Tous les statuts</option>
                     <option value="BROUILLON">Brouillon</option>
+                    <option value="EN_ATTENTE_VALIDATION">En attente de validation</option>
+                    <option value="RENVOYE_POUR_CORRECTION">Renvoyé pour correction</option>
                     <option value="PLANIFIEE">Planifiée</option>
                     <option value="EN_COURS">En cours</option>
                     <option value="TERMINEE">Terminée</option>
@@ -189,23 +191,42 @@
                         </ng-template>
                     </td>
                     <td class="col-statut">
-                        <select *ngIf="permissionService.peutCrudPlanning(); else statutLecture"
-                                class="statut-select"
-                                [ngModel]="activite.statut"
-                                (ngModelChange)="changerStatutDirect(activite, $event)"
-                                [ngClass]="getStatutClass(activite.statut)">
-                            <option value="BROUILLON">Brouillon</option>
-                            <option value="PLANIFIEE">Planifiée</option>
-                            <option value="EN_COURS">En cours</option>
-                            <option value="TERMINEE">Terminée</option>
-                            <option value="ANNULEE">Annulée</option>
-                            <option value="REPORTEE">Reportée</option>
-                        </select>
-                        <ng-template #statutLecture>
-                            <span class="badge" [ngClass]="getStatutClass(activite.statut)">
-                                {{ getStatutLabel(activite.statut) }}
+                        <!-- ✅ NOUVEAU : Affichage spécial pour les statuts de validation -->
+                        <ng-container *ngIf="activite.statut === 'EN_ATTENTE_VALIDATION'">
+                            <span class="badge badge-attente-validation"
+                                  [title]="'En attente de validation (niveau ' + (activite.niveauValidationActuel || 1) + ')'">
+                                ⏳ Attente validation
                             </span>
-                        </ng-template>
+                        </ng-container>
+
+                        <ng-container *ngIf="activite.statut === 'RENVOYE_POUR_CORRECTION'">
+                            <span class="badge badge-renvoye-correction"
+                                  [title]="'Renvoyé pour correction par le niveau ' + (activite.renvoyeParNiveau || '?')">
+                                ↩️ Renvoyé pour correction
+                            </span>
+                        </ng-container>
+
+                        <!-- ✅ Select normal pour les autres statuts -->
+                        <ng-container *ngIf="activite.statut !== 'EN_ATTENTE_VALIDATION'
+                                          && activite.statut !== 'RENVOYE_POUR_CORRECTION'">
+                            <select *ngIf="permissionService.peutCrudPlanning(); else statutLecture"
+                                    class="statut-select"
+                                    [ngModel]="activite.statut"
+                                    (ngModelChange)="changerStatutDirect(activite, $event)"
+                                    [ngClass]="getStatutClass(activite.statut)">
+                                <option value="BROUILLON">Brouillon</option>
+                                <option value="PLANIFIEE">Planifiée</option>
+                                <option value="EN_COURS">En cours</option>
+                                <option value="TERMINEE">Terminée</option>
+                                <option value="ANNULEE">Annulée</option>
+                                <option value="REPORTEE">Reportée</option>
+                            </select>
+                            <ng-template #statutLecture>
+                                <span class="badge" [ngClass]="getStatutClass(activite.statut)">
+                                    {{ getStatutLabel(activite.statut) }}
+                                </span>
+                            </ng-template>
+                        </ng-container>
                     </td>
                     <td class="col-actions">
                         <app-action-buttons
@@ -391,7 +412,6 @@
                             </div>
                         </div>
 
-                        <!-- Champs visibles UNIQUEMENT si NON programme -->
                         <ng-container *ngIf="!isAuProgramme()">
                             <div class="form-row">
                                 <div class="form-group">
@@ -442,7 +462,7 @@
                         </div>
                     </div>
 
-                    <!-- Zones et participants - VISIBLE pour tous (y compris au programme) -->
+                    <!-- Zones et participants -->
                     <div class="form-section" *ngIf="!isBrouillon()">
                         <h3 class="form-section-title">
                             <span class="section-icon">🗺️</span> Zones et participants
@@ -566,7 +586,7 @@
                         </button>
                     </div>
 
-                    <!-- DOCUMENTS - MASQUÉ si BROUILLON OU AU PROGRAMME -->
+                    <!-- DOCUMENTS -->
                     <div class="form-section" *ngIf="!isBrouillon() && !isAuProgramme()">
                         <h3 class="form-section-title">
                             <span class="section-icon">📎</span> Documents
@@ -714,7 +734,7 @@
                         </div>
                     </div>
 
-                    <!-- Message informatif : AU PROGRAMME (documents masqués) -->
+                    <!-- Message AU PROGRAMME -->
                     <div class="form-section" *ngIf="!isBrouillon() && isAuProgramme()">
                         <div class="alert alert-info-au-programme">
                             <span class="alert-icon">ℹ️</span>
@@ -732,7 +752,7 @@
                         </div>
                     </div>
 
-                    <!-- Message informatif pour BROUILLON -->
+                    <!-- Message BROUILLON -->
                     <div class="form-section" *ngIf="isBrouillon()">
                         <div class="alert alert-warning" style="margin-bottom: 0;">
                             <span class="alert-icon">ℹ️</span>
@@ -766,7 +786,7 @@
     </div>
 
     <!-- ============================================================ -->
-    <!-- MODAL CONFLITS                                               -->
+    <!-- MODAL CONFLITS (LECTURE SEULE — les validateurs traitent)   -->
     <!-- ============================================================ -->
     <div class="modal-overlay" *ngIf="showConflitModal" (click)="closeConflitModal()">
         <div class="modal-content modal-large" (click)="$event.stopPropagation()">
@@ -781,15 +801,24 @@
             </div>
 
             <div class="modal-body">
+                <!-- ✅ NOUVEAU : Message informatif (plus d'action possible côté planificateur) -->
+                <div class="alert alert-info">
+                    <span class="alert-icon">ℹ️</span>
+                    <div>
+                        <strong>Décision requise</strong>
+                        <p style="margin: 6px 0 0 0;">
+                            Le(s) participant(s) ci-dessous est (sont) déjà affecté(s) à  d'autre(s) activité(s) sur la même période.
+                            Vous pouvez <strong>confirmer</strong> la soumission au validateur  (qui tranchera
+                            pour chaque agent), ou <strong>annuler</strong> pour revenir
+                            en Brouillon.
+                        </p>
+                    </div>
+                </div>
                 <div class="alert alert-warning">
                     <span class="alert-icon">⚠️</span>
                     <div>
                         <strong>{{ conflitsDetectes.length }} conflit(s) détecté(s)</strong>
-                        <p>Pour chaque participant en conflit, vous pouvez :</p>
-                        <ul>
-                            <li><strong>Retirer</strong> le participant de l'activité</li>
-                            <li><strong>Forcer</strong> l'affectation malgré le conflit</li>
-                        </ul>
+                        <p>Voici la liste des conflits qui seront soumis au validateur :</p>
                     </div>
                 </div>
 
@@ -824,41 +853,27 @@
                                 </p>
                             </div>
                         </div>
-
-                        <div class="conflit-actions">
-                            <label class="force-checkbox">
-                                <input type="checkbox"
-                                       [checked]="isAgentForce(conflit.agentId)"
-                                       (change)="toggleAgentForce(conflit.agentId)">
-                                <span>Forcer l'affectation</span>
-                            </label>
-                            <button class="btn-danger-outline"
-                                    (click)="retirerAgentConflit(conflit.agentId)">
-                                Retirer le participant
-                            </button>
-                        </div>
                     </div>
                 </div>
             </div>
 
             <div class="modal-footer">
-                <button type="button" class="icon-btn-close"
-                        (click)="closeConflitModal()"
-                        title="Fermer">
-                    <i class="pi pi-times"></i>
+                <button type="button" class="btn-secondary"
+                        [disabled]="isLoading"
+                        (click)="annulerSoumissionValidation()">
+                    ↩️ Annuler et repasser en Brouillon
                 </button>
-                <button type="button" class="icon-btn-warning"
-                        [disabled]="isLoading || agentsForces.size === 0"
-                        (click)="confirmerAvecForcage()"
-                        title="Confirmer malgré les conflits">
-                    <i class="pi" [ngClass]="isLoading ? 'pi-spin pi-spinner' : 'pi-check'"></i>
+                <button type="button" class="btn-primary"
+                        [disabled]="isLoading"
+                        (click)="confirmerSoumissionValidation()">
+                    ✅ Confirmer la soumission
                 </button>
             </div>
         </div>
     </div>
 
     <!-- ============================================================ -->
-    <!-- MODAL REMPLACEMENT                                           -->
+    <!-- MODAL REMPLACEMENT (côté planificateur, sans forçage)       -->
     <!-- ============================================================ -->
     <div class="modal-overlay" *ngIf="showRemplacementModal" (click)="closeRemplacementModal()">
         <div class="modal-content modal-large" (click)="$event.stopPropagation()">
@@ -882,9 +897,6 @@
                      class="empty-state">
                     <span class="empty-icon">😕</span>
                     <p>Aucun agent disponible sur cette période</p>
-                    <p class="text-muted">
-                        Vous pouvez forcer l'affectation ou retirer le participant.
-                    </p>
                 </div>
 
                 <div *ngIf="!isLoadingRemplacants && remplacantsDisponibles.length > 0"
@@ -1034,10 +1046,298 @@
                     <i class="pi pi-times"></i>
                 </button>
                 <button type="button" class="icon-btn-edit"
-                        *ngIf="selectedActivite?.statut === 'PLANIFIEE' || selectedActivite?.statut === 'BROUILLON'"
+                        *ngIf="!estEnAttenteValidation(selectedActivite?.statut) &&
+                               (selectedActivite?.statut === 'PLANIFIEE' || selectedActivite?.statut === 'BROUILLON')"
                         (click)="editActivite(selectedActivite!); closeDetailModal()"
                         title="Modifier">
                     <i class="pi pi-pencil"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- ============================================================ -->
+    <!-- ✅ MODAL DE TRAITEMENT DES CONFLITS (VALIDATEUR) - REDESIGNÉ -->
+    <!-- ============================================================ -->
+    <div class="modal-overlay" *ngIf="showValidationModal" (click)="fermerValidationModal()">
+        <div class="modal-content modal-large modal-validation" (click)="$event.stopPropagation()">
+
+            <!-- ==================== HEADER ==================== -->
+            <div class="modal-header modal-header-validation">
+                <div class="modal-header-left">
+                    <div class="modal-icon-circle">
+                        <i class="pi pi-exclamation-triangle"></i>
+                    </div>
+                    <div>
+                        <h2>Traitement des conflits</h2>
+                        <p class="modal-subtitle">
+                            {{ activiteEnValidation?.titre }}
+                        </p>
+                        <span class="modal-badge-niveau">
+                            <i class="pi pi-shield"></i> {{ getNiveauLabel() }}
+                        </span>
+                    </div>
+                </div>
+                <button class="close-btn" (click)="fermerValidationModal()" title="Fermer">×</button>
+            </div>
+
+            <!-- ==================== BODY ==================== -->
+            <div class="modal-body modal-body-validation">
+
+                <!-- Info activité (cartes) -->
+                <div class="info-cards">
+                    <div class="info-card">
+                        <div class="info-card-icon date">
+                            <i class="pi pi-calendar"></i>
+                        </div>
+                        <div class="info-card-content">
+                            <span class="info-card-label">Période</span>
+                            <span class="info-card-value">
+                                {{ activiteEnValidation?.dateDebut | date:'dd/MM/yyyy' }}
+                                <i class="pi pi-arrow-right"></i>
+                                {{ activiteEnValidation?.dateFin | date:'dd/MM/yyyy' }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="info-card">
+                        <div class="info-card-icon location">
+                            <i class="pi pi-map-marker"></i>
+                        </div>
+                        <div class="info-card-content">
+                            <span class="info-card-label">Lieu</span>
+                            <span class="info-card-value">{{ activiteEnValidation?.lieu || '-' }}</span>
+                        </div>
+                    </div>
+
+                    <div class="info-card">
+                        <div class="info-card-icon participants">
+                            <i class="pi pi-users"></i>
+                        </div>
+                        <div class="info-card-content">
+                            <span class="info-card-label">Participants</span>
+                            <span class="info-card-value">
+                                {{ activiteEnValidation?.agentNoms?.length || 0 }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="info-card info-card-warning">
+                        <div class="info-card-icon conflicts">
+                            <i class="pi pi-bolt"></i>
+                        </div>
+                        <div class="info-card-content">
+                            <span class="info-card-label">Conflits</span>
+                            <span class="info-card-value">{{ conflitsAValider.length }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alerte progression -->
+                <div *ngIf="!tousConflitsTraites()" class="progress-alert">
+                    <div class="progress-alert-icon">
+                        <i class="pi pi-info-circle"></i>
+                    </div>
+                    <div class="progress-alert-content">
+                        <strong>{{ getNbConflitsRestants() }} conflit(s) restant(s)</strong>
+                        <p>
+                            Traitez chaque conflit (Retirer / Remplacer / Forcer) avant de pouvoir valider.
+                            Vous pouvez aussi renvoyer au niveau supérieur ou au planificateur à tout moment.
+                        </p>
+                    </div>
+                </div>
+
+                <div *ngIf="tousConflitsTraites() && conflitsAValider.length > 0" class="progress-alert progress-alert-success">
+                    <div class="progress-alert-icon">
+                        <i class="pi pi-check-circle"></i>
+                    </div>
+                    <div class="progress-alert-content">
+                        <strong>Tous les conflits sont traités</strong>
+                        <p>Vous pouvez maintenant valider ou renvoyer l'activité.</p>
+                    </div>
+                </div>
+
+                <!-- Liste des conflits -->
+                <div class="conflits-list">
+                    <div *ngFor="let c of conflitsAValider; let i = index"
+                         class="conflit-card"
+                         [class.conflit-card-traite]="c.action !== 'EN_ATTENTE'"
+                         [class.conflit-card-remplacer]="c.action === 'REMPLACER'">
+
+                        <!-- Header de la carte -->
+                        <div class="conflit-card-header">
+                            <div class="conflit-agent">
+                                <div class="agent-avatar-lg">
+                                    {{ (c.agentPrenom || '?')[0] }}{{ (c.agentNom || '?')[0] }}
+                                </div>
+                                <div class="agent-details">
+                                    <strong class="agent-name">
+                                        {{ c.agentPrenom }} {{ c.agentNom }}
+                                    </strong>
+                                    <span class="agent-poste">
+                                        <i class="pi pi-briefcase"></i>
+                                        {{ c.agentPoste || 'Participant' }}
+                                    </span>
+                                </div>
+                            </div>
+                            <span class="conflit-type-badge"
+                                  [ngClass]="c.typeConflit === 'INDISPONIBILITE' ? 'badge-indispo' : 'badge-affect'">
+                                <i class="pi"
+                                   [ngClass]="c.typeConflit === 'INDISPONIBILITE' ? 'pi-ban' : 'pi-sync'"></i>
+                                {{ c.typeConflit === 'INDISPONIBILITE' ? 'Indisponibilité' : 'Affectation simultanée' }}
+                            </span>
+                        </div>
+
+                        <!-- Détails du conflit -->
+                        <div class="conflit-card-details">
+                            <div *ngIf="c.activiteConflit" class="conflit-detail-row">
+                                <i class="pi pi-calendar-times"></i>
+                                <span>Déjà affecté à : <strong>{{ c.activiteConflit }}</strong></span>
+                            </div>
+                            <div *ngIf="c.motif" class="conflit-detail-row">
+                                <i class="pi pi-comment"></i>
+                                <span>Motif : {{ c.motif }}</span>
+                            </div>
+                            <div *ngIf="c.dateDebut" class="conflit-detail-row">
+                                <i class="pi pi-calendar"></i>
+                                <span>
+                                    Du {{ c.dateDebut | date:'dd/MM/yyyy' }}
+                                    au {{ c.dateFin | date:'dd/MM/yyyy' }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="conflit-card-actions">
+                            <button type="button"
+                                    class="action-btn action-btn-retirer"
+                                    [class.active]="c.action === 'RETIRER'"
+                                    (click)="setActionValidation(i, 'RETIRER')"
+                                    [title]="c.action === 'RETIRER' ? 'Cliquez pour annuler' : 'Retirer cet agent'">
+                                <i class="pi pi-times-circle"></i>
+                                <span>Retirer</span>
+                                <i *ngIf="c.action === 'RETIRER'" class="pi pi-check check-icon"></i>
+                            </button>
+
+                            <button type="button"
+                                    class="action-btn action-btn-remplacer"
+                                    [class.active]="c.action === 'REMPLACER'"
+                                    (click)="setActionValidation(i, 'REMPLACER')"
+                                    [title]="c.action === 'REMPLACER' ? 'Cliquez pour annuler' : 'Remplacer cet agent'">
+                                <i class="pi pi-refresh"></i>
+                                <span>Remplacer</span>
+                                <i *ngIf="c.action === 'REMPLACER'" class="pi pi-check check-icon"></i>
+                            </button>
+
+                            <button type="button"
+                                    class="action-btn action-btn-forcer"
+                                    [class.active]="c.action === 'FORCER'"
+                                    (click)="setActionValidation(i, 'FORCER')"
+                                    [title]="c.action === 'FORCER' ? 'Cliquez pour annuler' : 'Forcer l\'affectation'">
+                                <i class="pi pi-bolt"></i>
+                                <span>Forcer</span>
+                                <i *ngIf="c.action === 'FORCER'" class="pi pi-check check-icon"></i>
+                            </button>
+                        </div>
+
+                        <!-- Remplaçant sélectionné -->
+                        <div *ngIf="c.action === 'REMPLACER' && c.agentRemplacantId"
+                             class="remplacant-selected">
+                            <div class="remplacant-selected-icon">
+                                <i class="pi pi-user-plus"></i>
+                            </div>
+                            <div class="remplacant-selected-content">
+                                <span class="remplacant-selected-label">Remplaçant sélectionné</span>
+                                <strong>{{ c.agentRemplacantNom }}</strong>
+                            </div>
+                            <button type="button"
+                                    class="remplacant-selected-change"
+                                    (click)="ouvrirSelectionRemplacant(i)">
+                                <i class="pi pi-pencil"></i> Changer
+                            </button>
+                        </div>
+
+                        <!-- Sélection du remplaçant -->
+                        <div *ngIf="indexRemplacantValidationEnCours === i" class="remplacant-picker">
+                            <div *ngIf="isLoadingRemplacantsValidation" class="picker-loading">
+                                <div class="spinner-sm"></div>
+                                <span>Recherche des remplaçants disponibles...</span>
+                            </div>
+
+                            <div *ngIf="!isLoadingRemplacantsValidation && remplacantsValidation.length === 0"
+                                 class="picker-empty">
+                                <i class="pi pi-search"></i>
+                                <span>Aucun remplaçant disponible sur cette période</span>
+                            </div>
+
+                            <div *ngIf="!isLoadingRemplacantsValidation && remplacantsValidation.length > 0"
+                                 class="picker-grid">
+                                <div *ngFor="let agent of remplacantsValidation"
+                                     class="picker-item"
+                                     (click)="choisirRemplacantValidation(agent)">
+                                    <div class="picker-avatar">
+                                        {{ (agent.prenom || '?')[0] }}{{ (agent.nom || '?')[0] }}
+                                    </div>
+                                    <div class="picker-info">
+                                        <strong>{{ agent.prenom }} {{ agent.nom }}</strong>
+                                        <span>{{ agent.poste || 'Participant' }}</span>
+                                    </div>
+                                    <i class="pi pi-arrow-right picker-arrow"></i>
+                                </div>
+                            </div>
+
+                            <button type="button" class="picker-cancel"
+                                    (click)="annulerSelectionRemplacantValidation()">
+                                Annuler
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Commentaire -->
+                <div class="comment-section">
+                    <label class="comment-label">
+                        <i class="pi pi-comment"></i>
+                        Commentaire
+                        <span class="comment-required-note">(obligatoire pour renvoi au planificateur)</span>
+                    </label>
+                    <textarea class="comment-textarea"
+                              rows="3"
+                              [(ngModel)]="commentaireValidation"
+                              placeholder="Précisez les raisons du renvoi..."></textarea>
+                </div>
+
+            </div>
+
+            <!-- ==================== FOOTER ==================== -->
+            <div class="modal-footer modal-footer-validation">
+                <button type="button" class="footer-btn footer-btn-cancel"
+                        [disabled]="isLoadingValidation"
+                        (click)="fermerValidationModal()">
+                    <i class="pi pi-times"></i>
+                    Annuler
+                </button>
+
+                <button type="button" class="footer-btn footer-btn-warning"
+                        [disabled]="isLoadingValidation"
+                        (click)="renvoyerAuPlanificateur()">
+                    <i class="pi pi-undo"></i>
+                    Renvoyer au planificateur
+                </button>
+
+                <button type="button" class="footer-btn footer-btn-info"
+                        *ngIf="permissionService.getNiveauValidation() !== 3
+                              && permissionService.getNiveauValidation() !== -1"
+                        [disabled]="isLoadingValidation"
+                        (click)="renvoyerNiveauSuperieur()">
+                    <i class="pi pi-arrow-up"></i>
+                    Renvoyer au niveau supérieur
+                </button>
+
+                <button type="button" class="footer-btn footer-btn-validate"
+                        [disabled]="isLoadingValidation || !tousConflitsTraites()"
+                        (click)="validerConflits()">
+                    <i class="pi" [ngClass]="isLoadingValidation ? 'pi-spin pi-spinner' : 'pi-check-circle'"></i>
+                    Valider
                 </button>
             </div>
         </div>

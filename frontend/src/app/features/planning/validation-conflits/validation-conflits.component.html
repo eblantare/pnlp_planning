@@ -1,0 +1,242 @@
+<div class="validation-container">
+    <!-- En-tête -->
+    <div class="validation-header">
+        <div>
+            <h1>🔍 Validation des conflits</h1>
+            <p class="subtitle">{{ getNiveauLabel() }} — Activités en attente de validation</p>
+        </div>
+        <button class="btn-refresh" (click)="loadActivitesAValider()" [disabled]="isLoading">
+            🔄 Rafraîchir
+        </button>
+    </div>
+
+    <!-- Notifications -->
+    <div *ngIf="successMessage" class="alert alert-success">
+        <span class="alert-icon">✓</span> {{ successMessage }}
+    </div>
+    <div *ngIf="errorMessage" class="alert alert-danger">
+        <span class="alert-icon">✕</span> {{ errorMessage }}
+    </div>
+
+    <!-- Chargement -->
+    <div *ngIf="isLoading" class="loading-container">
+        <div class="spinner"></div>
+        <p>Chargement...</p>
+    </div>
+
+    <!-- Aucune activité -->
+    <div *ngIf="!isLoading && activites.length === 0" class="empty-state">
+        <span class="empty-icon">✅</span>
+        <h2>Aucune activité en attente</h2>
+        <p>Toutes les activités de votre niveau sont traitées.</p>
+    </div>
+
+    <!-- Liste des activités -->
+    <div *ngIf="!isLoading && activites.length > 0" class="activites-list">
+        <div *ngFor="let activite of activites" class="activite-card">
+            <div class="activite-card-header">
+                <div>
+                    <h3>{{ activite.titre }}</h3>
+                    <p class="activite-dates">
+                        📅 {{ activite.dateDebut | date:'dd/MM/yyyy' }}
+                        → {{ activite.dateFin | date:'dd/MM/yyyy' }}
+                        <span class="badge-jours">{{ activite.nombreJours }}j</span>
+                    </p>
+                    <p class="activite-lieu" *ngIf="activite.lieu">
+                        📍 {{ activite.lieu }}
+                    </p>
+                </div>
+                <div class="activite-statut">
+                    <span class="badge badge-warning">
+                        {{ getStatutLabel(activite.statut) }}
+                    </span>
+                    <span class="badge-niveau">N{{ activite.niveauValidationActuel }}</span>
+                </div>
+            </div>
+
+            <div class="activite-card-body">
+                <div class="info-row">
+                    <span class="info-label">👥 Participants :</span>
+                    <span class="info-value">{{ activite.agentNoms?.length || 0 }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">⚠️ Conflits :</span>
+                    <span class="info-value conflit-count">
+                        {{ activite.conflits?.length || 0 }}
+                    </span>
+                </div>
+            </div>
+
+            <div class="activite-card-footer">
+                <button class="btn-primary" (click)="ouvrirTraitement(activite)">
+                    🔍 Traiter les conflits
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- MODAL DE TRAITEMENT                                          -->
+    <!-- ============================================================ -->
+    <div class="modal-overlay" *ngIf="showModal" (click)="fermerModal()">
+        <div class="modal-content modal-large" (click)="$event.stopPropagation()">
+
+            <div class="modal-header">
+                <div>
+                    <h2>🔍 Traitement des conflits</h2>
+                    <p class="modal-subtitle">{{ activiteSelectionnee?.titre }}</p>
+                </div>
+                <button class="close-btn" (click)="fermerModal()">×</button>
+            </div>
+
+            <div class="modal-body">
+
+                <!-- Info activité -->
+                <div class="info-banner">
+                    <div class="info-item">
+                        <span class="info-label">📅 Période :</span>
+                        <span>{{ activiteSelectionnee?.dateDebut | date:'dd/MM/yyyy' }}
+                            → {{ activiteSelectionnee?.dateFin | date:'dd/MM/yyyy' }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">📍 Lieu :</span>
+                        <span>{{ activiteSelectionnee?.lieu || '-' }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">👥 Participants :</span>
+                        <span>{{ activiteSelectionnee?.agentNoms?.length || 0 }}</span>
+                    </div>
+                </div>
+
+                <!-- Alerte si conflits restants -->
+                <div *ngIf="!tousConflitsTraites()" class="alert alert-warning">
+                    <span class="alert-icon">⚠️</span>
+                    <strong>{{ getNbConflitsRestants() }} conflit(s)</strong>
+                    restant(s) à traiter avant de pouvoir valider.
+                </div>
+
+                <!-- Liste des conflits -->
+                <div class="conflits-list">
+                    <div *ngFor="let c of conflitsEditable; let i = index" class="conflit-item">
+                        <div class="conflit-header">
+                            <div class="conflit-agent">
+                                <div class="agent-avatar">
+                                    {{ (c.agentPrenom || '?')[0] }}{{ (c.agentNom || '?')[0] }}
+                                </div>
+                                <div>
+                                    <strong>{{ c.agentPrenom }} {{ c.agentNom }}</strong>
+                                    <span class="agent-poste">{{ c.agentPoste || 'Participant' }}</span>
+                                </div>
+                            </div>
+                            <span class="badge"
+                                  [ngClass]="c.typeConflit === 'INDISPONIBILITE' ? 'badge-danger' : 'badge-warning'">
+                                {{ c.typeConflit === 'INDISPONIBILITE' ? 'Indisponibilité' : 'Affectation simultanée' }}
+                            </span>
+                        </div>
+
+                        <div class="conflit-details">
+                            <p *ngIf="c.activiteConflit">
+                                Déjà affecté à : <strong>{{ c.activiteConflit }}</strong>
+                            </p>
+                            <p *ngIf="c.motif">Motif : {{ c.motif }}</p>
+                            <p class="conflit-dates" *ngIf="c.dateDebut">
+                                📅 Du {{ c.dateDebut | date:'dd/MM/yyyy' }}
+                                au {{ c.dateFin | date:'dd/MM/yyyy' }}
+                            </p>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="conflit-actions">
+                            <button type="button"
+                                    class="btn-action"
+                                    [class.active]="c.action === 'RETIRER'"
+                                    (click)="setAction(i, 'RETIRER')">
+                                ❌ Retirer
+                            </button>
+                            <button type="button"
+                                    class="btn-action"
+                                    [class.active]="c.action === 'REMPLACER'"
+                                    (click)="setAction(i, 'REMPLACER'); ouvrirSelectionRemplacant(i)">
+                                🔄 Remplacer
+                            </button>
+                            <button type="button"
+                                    class="btn-action"
+                                    [class.active]="c.action === 'FORCER'"
+                                    (click)="setAction(i, 'FORCER')">
+                                ⚡ Forcer
+                            </button>
+                        </div>
+
+                        <!-- Affichage du remplaçant sélectionné -->
+                        <div *ngIf="c.action === 'REMPLACER' && c.agentRemplacantId" class="remplacant-selectionne">
+                            ✅ Remplaçant sélectionné : <strong>{{ c.agentRemplacantNom }}</strong>
+                        </div>
+
+                        <!-- Sélection du remplaçant -->
+                        <div *ngIf="indexRemplacantEnCours === i" class="remplacant-selection">
+                            <div *ngIf="isLoadingRemplacants" class="loading-container">
+                                <div class="spinner"></div>
+                                <p>Recherche des remplaçants...</p>
+                            </div>
+
+                            <div *ngIf="!isLoadingRemplacants && remplacantsDisponibles.length === 0"
+                                 class="empty-state-small">
+                                <p>Aucun remplaçant disponible sur cette période.</p>
+                            </div>
+
+                            <div *ngIf="!isLoadingRemplacants && remplacantsDisponibles.length > 0"
+                                 class="remplacants-grid">
+                                <div *ngFor="let agent of remplacantsDisponibles"
+                                     class="remplacant-item"
+                                     (click)="choisirRemplacant(agent)">
+                                    <strong>{{ agent.prenom }} {{ agent.nom }}</strong>
+                                    <span>{{ agent.poste || 'Participant' }}</span>
+                                </div>
+                            </div>
+
+                            <button type="button" class="btn-secondary btn-sm"
+                                    (click)="annulerSelectionRemplacant()">
+                                Annuler
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Commentaire (obligatoire pour renvoi planificateur) -->
+                <div class="form-group">
+                    <label class="form-label">
+                        Commentaire
+                        <span class="optional">(obligatoire pour renvoi au planificateur)</span>
+                    </label>
+                    <textarea class="form-control"
+                              rows="3"
+                              [(ngModel)]="commentaire"
+                              placeholder="Précisez les raisons du renvoi..."></textarea>
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" (click)="fermerModal()">
+                    Annuler
+                </button>
+                <button type="button" class="btn-warning"
+                        [disabled]="isLoading"
+                        (click)="renvoyerPlanificateur()">
+                    ↩️ Renvoyer au planificateur
+                </button>
+                <button type="button" class="btn-info"
+                        *ngIf="niveauValidation !== 3 && niveauValidation !== -1"
+                        [disabled]="isLoading || !tousConflitsTraites()"
+                        (click)="renvoyerNiveauSuperieur()">
+                    ⬆️ Renvoyer au niveau supérieur
+                </button>
+                <button type="button" class="btn-primary"
+                        [disabled]="isLoading || !tousConflitsTraites()"
+                        (click)="valider()">
+                    ✅ Valider
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -52,4 +52,8 @@ public class ActiviteDTO {
     private Boolean ordreMissionEmailEnvoye;
     // ✅ NOUVEAU : activité au programme
     private Boolean auProgramme;
+    private Integer niveauValidationActuel;
+    private Integer valideParNiveau;
+    private Integer renvoyeParNiveau;
+    private List<ConflitAgentDTO> conflits;
 }

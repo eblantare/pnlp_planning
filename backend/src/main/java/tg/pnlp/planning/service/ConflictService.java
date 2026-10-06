@@ -41,6 +41,10 @@ public class ConflictService {
             }
 
             Activite activite = aff.getActivite();
+            // ✅ Règle R1 : une activité au programme n'est jamais source de conflit
+            if (Boolean.TRUE.equals(activite.getAuProgramme())) {
+                continue;
+            }
             Activite.StatutActivite statut = activite.getStatut();
 
             if (statut == Activite.StatutActivite.BROUILLON
@@ -86,6 +90,10 @@ public class ConflictService {
                     .findByAgentIdExcludingActivite(agent.getId(), activiteId, fin, debut);
 
             for (Affectation autre : autresAffectations) {
+                // ✅ Règle R1
+                if (Boolean.TRUE.equals(autre.getActivite().getAuProgramme())) {
+                    continue;
+                }
                 conflits.add(ConflitDTO.builder()
                         .agentId(agent.getId())
                         .agentNom(agent.getNomComplet())

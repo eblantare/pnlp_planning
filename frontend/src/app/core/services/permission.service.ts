@@ -4,12 +4,19 @@ import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface MesPermissions {
-    menus: string[];              // ['DASHBOARD', 'PLANNING', ...]
+    menus: string[];
     crudPlanning: boolean;
     crudAgents: boolean;
     crudProfils: boolean;
     crudUtilisateurs: boolean;
     profils: string[];
+
+    // ✅ NOUVEAU : workflow de validation
+    peutValiderN1: boolean;
+    peutValiderN2: boolean;
+    peutValiderN3: boolean;
+    niveauValidation: number | null;   // 1, 2, 3, -1 (SUPER_ADMIN), ou null
+    activitesAValider: number;         // compteur pour le badge
 }
 
 @Injectable({
@@ -18,65 +25,84 @@ export interface MesPermissions {
 export class PermissionService {
     private apiUrl = `${environment.apiUrl}/permissions`;
 
-    // Cache local des permissions
     private permissionsSubject = new BehaviorSubject<MesPermissions | null>(null);
     public permissions$ = this.permissionsSubject.asObservable();
 
     constructor(private http: HttpClient) { }
 
-    /**
-     * Charge les permissions depuis le backend et les met en cache.
-     */
     chargerMesPermissions(): Observable<MesPermissions> {
         return this.http.get<MesPermissions>(`${this.apiUrl}/moi`)
             .pipe(tap(p => this.permissionsSubject.next(p)));
     }
 
-    /**
-     * Vérifie si l'utilisateur a accès à un menu.
-     */
+    // ============================================================
+    // MENUS
+    // ============================================================
+
     aAccesAuMenu(menu: string): boolean {
         const p = this.permissionsSubject.value;
         return p?.menus?.includes(menu) || false;
     }
 
-    /**
-     * Vérifie si l'utilisateur peut créer/modifier/supprimer dans le planning.
-     */
+    // ============================================================
+    // CRUD
+    // ============================================================
+
     peutCrudPlanning(): boolean {
         return this.permissionsSubject.value?.crudPlanning || false;
     }
 
-    /**
-     * Vérifie si l'utilisateur peut gérer les agents.
-     */
     peutCrudAgents(): boolean {
         return this.permissionsSubject.value?.crudAgents || false;
     }
 
-    /**
-     * Vérifie si l'utilisateur peut gérer les profils.
-     */
     peutCrudProfils(): boolean {
         return this.permissionsSubject.value?.crudProfils || false;
     }
 
-    /**
-     * Vérifie si l'utilisateur peut gérer les utilisateurs.
-     */
     peutCrudUtilisateurs(): boolean {
         return this.permissionsSubject.value?.crudUtilisateurs || false;
     }
 
-    /**
-     * ✅ NOUVEAU : vérifie si les permissions ont déjà été chargées.
-     */
+    // ============================================================
+    // ✅ NOUVEAU : VALIDATION
+    // ============================================================
+
+    peutValiderN1(): boolean {
+        return this.permissionsSubject.value?.peutValiderN1 || false;
+    }
+
+    peutValiderN2(): boolean {
+        return this.permissionsSubject.value?.peutValiderN2 || false;
+    }
+
+    peutValiderN3(): boolean {
+        return this.permissionsSubject.value?.peutValiderN3 || false;
+    }
+
+    /** Retourne true si l'utilisateur est validateur (peu importe le niveau). */
+    estValidateur(): boolean {
+        return this.peutValiderN1() || this.peutValiderN2() || this.peutValiderN3();
+    }
+
+    /** Retourne le niveau du validateur connecté (1, 2, 3, -1 pour SUPER_ADMIN, null sinon). */
+    getNiveauValidation(): number | null {
+        return this.permissionsSubject.value?.niveauValidation ?? null;
+    }
+
+    /** Retourne le nombre d'activités à valider (badge). */
+    getActivitesAValider(): number {
+        return this.permissionsSubject.value?.activitesAValider || 0;
+    }
+
+    // ============================================================
+    // ÉTAT
+    // ============================================================
+
     estCharge(): boolean {
         return this.permissionsSubject.value !== null;
     }
-    /**
-     * Vide le cache (appelé au logout).
-     */
+
     vider(): void {
         this.permissionsSubject.next(null);
     }

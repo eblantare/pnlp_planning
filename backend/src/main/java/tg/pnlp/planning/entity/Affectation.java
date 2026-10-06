@@ -52,4 +52,25 @@ public class Affectation {
     public int hashCode() {
         return getClass().hashCode();
     }
+
+    @Column(name = "en_conflit")
+    @Builder.Default
+    private Boolean enConflit = false;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "action_validation", length = 20)
+    private ActionValidation actionValidation;   // EN_ATTENTE, RETIRER, REMPLACER, FORCER
+
+    @Column(name = "force")
+    @Builder.Default
+    private Boolean force = false;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "agent_remplacant_id")
+    private Agent agentRemplacant;
+
+    @Column(name = "motif_conflit", length = 500)
+    private String motifConflit;
+
+    public enum ActionValidation { EN_ATTENTE, RETIRER, REMPLACER, FORCER }
 }

@@ -19,13 +19,23 @@ public interface AffectationRepository extends JpaRepository<Affectation, UUID> 
 
     List<Affectation> findByActiviteId(UUID activiteId);
 
+    /**
+     * ✅ CORRIGÉ : ajout du LEFT JOIN FETCH sur agentRemplacant
+     *    pour éviter le lazy loading lors de la construction du DTO.
+     */
     @Query("SELECT af FROM Affectation af " +
             "JOIN FETCH af.agent " +
+            "LEFT JOIN FETCH af.agentRemplacant " +
             "WHERE af.activite.id = :activiteId")
     List<Affectation> findByActiviteIdWithAgent(@Param("activiteId") UUID activiteId);
 
+    /**
+     * ✅ CORRIGÉ : ajout du LEFT JOIN FETCH sur agentRemplacant
+     *    pour éviter le lazy loading lors de la construction du DTO.
+     */
     @Query("SELECT af FROM Affectation af " +
             "JOIN FETCH af.agent " +
+            "LEFT JOIN FETCH af.agentRemplacant " +
             "WHERE af.activite.id IN :activiteIds")
     List<Affectation> findByActiviteIdInWithAgent(@Param("activiteIds") List<UUID> activiteIds);
 
@@ -64,13 +74,36 @@ public interface AffectationRepository extends JpaRepository<Affectation, UUID> 
 """)
     List<Affectation> findActivesByActiviteId(@Param("activiteId") UUID activiteId);
 
-    // ✅ NOUVEAU : compte les affectations d'une activité (utilisé pour vérifier s'il reste des agents)
+    // ✅ Compte les affectations d'une activité (utilisé pour vérifier s'il reste des agents)
     long countByActiviteId(UUID activiteId);
 
-    // ✅ NOUVEAU : supprime les affectations d'une activité pour une liste d'agents
+    // ✅ Supprime les affectations d'une activité pour une liste d'agents
     @Modifying
     @Transactional
     @Query("DELETE FROM Affectation a WHERE a.activite.id = :activiteId AND a.agent.id IN :agentIds")
     void deleteByActiviteIdAndAgentIdIn(@Param("activiteId") UUID activiteId,
                                         @Param("agentIds") List<UUID> agentIds);
+
+    // ============================================================
+    // ✅ NOUVEAU : Workflow de validation des conflits
+    // ============================================================
+
+    /**
+     * Récupère les affectations en conflit d'une activité.
+     * Utilisé par ValidationService pour lister les conflits à traiter.
+     *
+     * ✅ CORRIGÉ : JOIN FETCH sur agent et agentRemplacant
+     *    pour que convertToDTO() puisse accéder aux données sans LazyInitializationException.
+     */
+    @Query("SELECT af FROM Affectation af " +
+            "JOIN FETCH af.agent " +
+            "LEFT JOIN FETCH af.agentRemplacant " +
+            "WHERE af.activite.id = :activiteId " +
+            "AND af.enConflit = true")
+    List<Affectation> findByActiviteIdAndEnConflitTrue(@Param("activiteId") UUID activiteId);
+
+    long countByActiviteIdAndEnConflitTrue(UUID activiteId);
+
+    long countByActiviteIdAndActionValidation(UUID activiteId,
+                                              Affectation.ActionValidation action);
 }

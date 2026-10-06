@@ -32,6 +32,8 @@ public class Utilisateur {
 
     @Column(unique = true)
     private String email;
+    @Column(length = 20)
+    private String telephone;
 
     // ✅ NOUVEAU : plusieurs profils
     @ManyToMany(fetch = FetchType.EAGER)

@@ -1,0 +1,28 @@
+.badge-notification {
+    background: #C62828;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: auto;
+    min-width: 20px;
+    text-align: center;
+    animation: pulse 2s infinite;
+}
+
+.nav-link-validation {
+    position: relative;
+}
+
+.nav-sublabel {
+    color: #9CA3AF;
+    font-size: 11px;
+    font-weight: 400;
+    margin-left: 4px;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}

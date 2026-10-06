@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="023-validation-conflits-1" author="pnlp">
+        <comment>Ajout colonnes conflits sur affectations</comment>
+        <addColumn tableName="affectations">
+            <column name="en_conflit" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="action_validation" type="VARCHAR(20)"/>
+            <column name="force" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="agent_remplacant_id" type="UUID"/>
+            <column name="motif_conflit" type="VARCHAR(500)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="023-validation-conflits-2" author="pnlp">
+        <comment>FK agent remplaçant</comment>
+        <addForeignKeyConstraint
+                baseTableName="affectations"
+                baseColumnNames="agent_remplacant_id"
+                constraintName="fk_affectation_agent_remplacant"
+                referencedTableName="agents"
+                referencedColumnNames="id"/>
+    </changeSet>
+
+    <changeSet id="023-validation-conflits-3" author="pnlp">
+        <comment>Téléphone utilisateur pour SMS</comment>
+        <addColumn tableName="utilisateurs">
+            <column name="telephone" type="VARCHAR(20)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="023-validation-conflits-4" author="pnlp">
+        <comment>Initialiser niveau validation pour activités existantes</comment>
+        <sql>
+            UPDATE activites
+            SET niveau_validation_actuel = 1
+            WHERE statut = 'EN_ATTENTE_VALIDATION'
+              AND niveau_validation_actuel IS NULL;
+        </sql>
+    </changeSet>
+
+    <changeSet id="023-validation-conflits-5" author="pnlp">
+        <comment>Créer les profils validateurs</comment>
+        <sql>
+            INSERT INTO profils (id, code, libelle, description, niveau, actif, created_at, updated_at)
+            SELECT gen_random_uuid(), 'VALIDATEUR_NIVEAU_1', 'Validateur Niveau 1',
+                   'Valide les conflits de niveau 1', 1, true, NOW(), NOW()
+                WHERE NOT EXISTS (SELECT 1 FROM profils WHERE code = 'VALIDATEUR_NIVEAU_1');
+
+            INSERT INTO profils (id, code, libelle, description, niveau, actif, created_at, updated_at)
+            SELECT gen_random_uuid(), 'VALIDATEUR_NIVEAU_2', 'Validateur Niveau 2',
+                   'Valide les conflits de niveau 2', 2, true, NOW(), NOW()
+                WHERE NOT EXISTS (SELECT 1 FROM profils WHERE code = 'VALIDATEUR_NIVEAU_2');
+
+            INSERT INTO profils (id, code, libelle, description, niveau, actif, created_at, updated_at)
+            SELECT gen_random_uuid(), 'VALIDATEUR_NIVEAU_3', 'Validateur Niveau 3',
+                   'Valide les conflits de niveau 3', 3, true, NOW(), NOW()
+                WHERE NOT EXISTS (SELECT 1 FROM profils WHERE code = 'VALIDATEUR_NIVEAU_3');
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

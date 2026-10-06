@@ -28,9 +28,7 @@ public class PlanningController {
     private final PlanningService planningService;
 
     // ============================================================
-    // ✅ LECTURE (GET) : accessible à TOUS les utilisateurs authentifiés
-    //    Nécessaire pour que CONSULTANT / OBSERVATEUR / AGENT puissent
-    //    consulter le planning sans pouvoir le modifier.
+    // ✅ LECTURE (GET)
     // ============================================================
 
     @GetMapping("/mensuel")
@@ -64,8 +62,7 @@ public class PlanningController {
     }
 
     // ============================================================
-    // ✅ ÉCRITURE (POST/PUT/PATCH/DELETE) : SUPER_ADMIN, ADMIN, PLANIFICATEUR
-    //    CONSULTANT / OBSERVATEUR / AGENT en sont exclus.
+    // ✅ ÉCRITURE PLANNING : SUPER_ADMIN, ADMIN, PLANIFICATEUR
     // ============================================================
 
     @PostMapping("/activites")
@@ -96,7 +93,7 @@ public class PlanningController {
     }
 
     // ============================================================
-    // UPLOAD / SUPPRESSION DE FICHIERS (écriture)
+    // UPLOAD / SUPPRESSION DE FICHIERS
     // ============================================================
 
     @PostMapping(value = "/activites/{id}/tdr", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -151,7 +148,7 @@ public class PlanningController {
     }
 
     // ============================================================
-    // RENVOI D'EMAILS (action métier sensible → écriture)
+    // RENVOI D'EMAILS
     // ============================================================
 
     @PostMapping("/activites/{id}/renvoyer-tdr")

@@ -1,0 +1,98 @@
+<aside class="sidebar" [class.collapsed]="isCollapsed">
+
+    <!-- Logo / Branding -->
+    <div class="sidebar-header">
+        <div class="brand">
+            <span class="brand-icon">🏥</span>
+            <span class="brand-text" *ngIf="!isCollapsed">PNLP Planning</span>
+        </div>
+        <button class="btn-collapse" (click)="toggleCollapse()" title="Réduire/Étendre">
+            <i class="pi" [ngClass]="isCollapsed ? 'pi-angle-right' : 'pi-angle-left'"></i>
+        </button>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="sidebar-nav">
+        <ul class="nav-list">
+
+            <!-- Dashboard -->
+            <li class="nav-item" *appHasPermission="'DASHBOARD'">
+                <a routerLink="/dashboard" routerLinkActive="active" class="nav-link">
+                    <i class="pi pi-home"></i>
+                    <span class="nav-text" *ngIf="!isCollapsed">Tableau de bord</span>
+                </a>
+            </li>
+
+            <!-- Planning -->
+            <li class="nav-item" *appHasPermission="'PLANNING'">
+                <a routerLink="/planning" routerLinkActive="active" class="nav-link">
+                    <i class="pi pi-calendar"></i>
+                    <span class="nav-text" *ngIf="!isCollapsed">Planning</span>
+                </a>
+            </li>
+
+            <!-- ✅ NOUVEAU : Validation (uniquement pour les validateurs) -->
+            <li class="nav-item" *ngIf="peutVoirValidation()">
+                <a routerLink="/planning/validation"
+                   routerLinkActive="active"
+                   class="nav-link nav-link-validation">
+                    <i class="pi pi-check-circle"></i>
+                    <span class="nav-text" *ngIf="!isCollapsed">
+                        Validation
+                        <small *ngIf="niveauLabel" class="nav-sublabel">({{ niveauLabel }})</small>
+                    </span>
+                    <span *ngIf="badgeValidation > 0"
+                          class="badge-notification"
+                          [title]="badgeValidation + ' activité(s) à valider'">
+                        {{ badgeValidation }}
+                    </span>
+                </a>
+            </li>
+
+            <!-- Statistiques -->
+            <li class="nav-item" *appHasPermission="'STATISTIQUES'">
+                <a routerLink="/statistiques" routerLinkActive="active" class="nav-link">
+                    <i class="pi pi-chart-bar"></i>
+                    <span class="nav-text" *ngIf="!isCollapsed">Statistiques</span>
+                </a>
+            </li>
+
+            <!-- Agents -->
+            <li class="nav-item" *appHasPermission="'AGENTS'">
+                <a routerLink="/agents" routerLinkActive="active" class="nav-link">
+                    <i class="pi pi-users"></i>
+                    <span class="nav-text" *ngIf="!isCollapsed">Agents</span>
+                </a>
+            </li>
+
+            <!-- Profils -->
+            <li class="nav-item" *appHasPermission="'PROFILS'">
+                <a routerLink="/profils" routerLinkActive="active" class="nav-link">
+                    <i class="pi pi-shield"></i>
+                    <span class="nav-text" *ngIf="!isCollapsed">Profils</span>
+                </a>
+            </li>
+
+            <!-- Utilisateurs -->
+            <li class="nav-item" *appHasPermission="'UTILISATEURS'">
+                <a routerLink="/utilisateurs" routerLinkActive="active" class="nav-link">
+                    <i class="pi pi-user"></i>
+                    <span class="nav-text" *ngIf="!isCollapsed">Utilisateurs</span>
+                </a>
+            </li>
+
+        </ul>
+    </nav>
+
+    <!-- Footer (utilisateur + déconnexion) -->
+    <div class="sidebar-footer">
+        <div class="user-info" *ngIf="!isCollapsed">
+            <span class="user-icon">👤</span>
+            <span class="user-name">{{ username }}</span>
+        </div>
+        <button class="btn-logout" (click)="logout()" title="Se déconnecter">
+            <i class="pi pi-sign-out"></i>
+            <span *ngIf="!isCollapsed">Déconnexion</span>
+        </button>
+    </div>
+</aside>

@@ -17,5 +17,8 @@
     <include file="db/changelog/012-add-type-lieu-activites.xml"/>
     <include file="db/changelog/013-utilisateur-profils-nn.xml"/>
     <include file="db/changelog/013-add-au-programme.xml"/>
+    <include file="db/changelog/023-validation-conflits.xml"/>
+    <include file="db/changelog/024-fix-statut-check.xml"/>
+
 
 </databaseChangeLog>

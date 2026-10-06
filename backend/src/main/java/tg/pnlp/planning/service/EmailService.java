@@ -30,6 +30,74 @@ public class EmailService {
     private String frontendUrl;
 
     private static final DateTimeFormatter DF = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    // Ajouter dans EmailService :
+    public void envoyerNotificationValidation(Utilisateur validateur, Activite activite, int niveau) {
+        if (validateur.getEmail() == null || validateur.getEmail().isBlank()) return;
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
+            helper.setFrom(fromEmail);
+            helper.setTo(validateur.getEmail());
+            helper.setSubject("PNLP - Activité en attente de validation N" + niveau
+                    + " : " + activite.getTitre());
+            helper.setText(
+                    "Bonjour " + validateur.getUsername() + ",\n\n"
+                            + "Une activité nécessite votre validation (niveau " + niveau + ").\n\n"
+                            + "Titre : " + activite.getTitre() + "\n"
+                            + "Période : " + formatDate(activite.getDateDebut()) + " au " + formatDate(activite.getDateFin()) + "\n"
+                            + "Lieu : " + (activite.getLieu() != null ? activite.getLieu() : "-") + "\n\n"
+                            + "Connectez-vous à l'application pour traiter les conflits et valider.\n\n"
+                            + "Cordialement,\nLe PNLP", false);
+            mailSender.send(message);
+            log.info("Notif validation N{} envoyée à {}", niveau, validateur.getEmail());
+        } catch (Exception e) {
+            log.error("Échec notif validation: {}", e.getMessage());
+        }
+    }
+
+    public void envoyerNotificationRenvoiPlanificateur(Utilisateur planificateur, Activite activite, String motif) {
+        if (planificateur.getEmail() == null || planificateur.getEmail().isBlank()) return;
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
+            helper.setFrom(fromEmail);
+            helper.setTo(planificateur.getEmail());
+            helper.setSubject("PNLP - Activité renvoyée pour correction : " + activite.getTitre());
+            helper.setText(
+                    "Bonjour " + planificateur.getUsername() + ",\n\n"
+                            + "L'activité \"" + activite.getTitre() + "\" vous a été renvoyée pour correction.\n\n"
+                            + "Motif : " + motif + "\n\n"
+                            + "Merci de corriger et resoumettre.\n\n"
+                            + "Cordialement,\nLe PNLP", false);
+            mailSender.send(message);
+            log.info("Notif renvoi envoyée à {}", planificateur.getEmail());
+        } catch (Exception e) {
+            log.error("Échec notif renvoi: {}", e.getMessage());
+        }
+    }
+
+    public void envoyerNotificationValidationFinale(Utilisateur createur, Activite activite) {
+        if (createur.getEmail() == null || createur.getEmail().isBlank()) return;
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
+            helper.setFrom(fromEmail);
+            helper.setTo(createur.getEmail());
+            helper.setSubject("PNLP - Activité validée : " + activite.getTitre());
+            helper.setText(
+                    "Bonjour " + createur.getUsername() + ",\n\n"
+                            + "Bonne nouvelle : l'activité \"" + activite.getTitre() + "\" a été validée.\n"
+                            + "Elle est maintenant planifiée.\n\n"
+                            + "Cordialement,\nLe PNLP", false);
+            mailSender.send(message);
+        } catch (Exception e) {
+            log.error("Échec notif validation finale: {}", e.getMessage());
+        }
+    }
+
+    private String formatDate(java.time.LocalDate d) {
+        return d != null ? d.format(DF) : "?";
+    }
 
     // ============================================================
     // RÉINITIALISATION DE MOT DE PASSE (existant)

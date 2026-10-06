@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="024-fix-statut-check" author="pnlp">
+        <comment>Élargir la contrainte CHECK sur activites.statut</comment>
+
+        <sql>
+            ALTER TABLE activites DROP CONSTRAINT IF EXISTS activites_statut_check;
+        </sql>
+
+        <sql>
+            ALTER TABLE activites ADD CONSTRAINT activites_statut_check
+                CHECK (statut IN (
+                                  'BROUILLON',
+                                  'EN_ATTENTE_VALIDATION',
+                                  'RENVOYE_POUR_CORRECTION',
+                                  'PLANIFIEE',
+                                  'EN_COURS',
+                                  'TERMINEE',
+                                  'ANNULEE',
+                                  'REPORTEE'
+                    ));
+        </sql>
+
+        <rollback>
+            <sql>
+                ALTER TABLE activites DROP CONSTRAINT IF EXISTS activites_statut_check;
+                ALTER TABLE activites ADD CONSTRAINT activites_statut_check
+                CHECK (statut IN ('BROUILLON','PLANIFIEE','EN_COURS','TERMINEE','ANNULEE','REPORTEE'));
+            </sql>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

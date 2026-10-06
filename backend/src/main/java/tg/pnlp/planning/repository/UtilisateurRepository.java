@@ -37,4 +37,8 @@ public interface UtilisateurRepository extends JpaRepository<Utilisateur, UUID> 
     // ✅ NOUVEAU : charger l'utilisateur avec ses profils (pour le login)
     @Query("SELECT DISTINCT u FROM Utilisateur u LEFT JOIN FETCH u.profils WHERE u.username = :username")
     Optional<Utilisateur> findByUsernameWithProfils(@Param("username") String username);
+    // Ajouter dans UtilisateurRepository :
+
+    @Query("SELECT DISTINCT u FROM Utilisateur u JOIN u.profils p WHERE p.code = :code AND u.actif = true")
+    List<Utilisateur> findByProfilCode(@Param("code") String code);
 }

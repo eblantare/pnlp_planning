@@ -4,6 +4,10 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Agent } from './agent.service';
 
+// ============================================================
+// INTERFACES
+// ============================================================
+
 export interface Activite {
     id?: string;
     titre: string;
@@ -13,7 +17,7 @@ export interface Activite {
     nombreJours?: number;
     lieu?: string;
     sourceFinancement?: string;
-    typeLieu?: string;              // ✅ NOUVEAU : "RESIDENT" | "NON_RESIDENT"
+    typeLieu?: string;
     statut?: string;
     agentIds?: string[];
     agentNoms?: string[];
@@ -24,7 +28,13 @@ export interface Activite {
     createdByNom?: string;
     auProgramme?: boolean;
 
-    // ✅ Fichiers attachés
+    // ✅ NOUVEAU : workflow de validation
+    niveauValidationActuel?: number;
+    valideParNiveau?: number;
+    renvoyeParNiveau?: number;
+    conflits?: ConflitAgent[];
+
+    // Fichiers
     tdrFilename?: string;
     tdrUploadedAt?: string;
     tdrConforme?: boolean;
@@ -51,6 +61,14 @@ export interface ConflitAgent {
     dateDebut?: string;
     dateFin?: string;
     motif?: string;
+
+    // ✅ NOUVEAU : gestion par le validateur
+    affectationId?: string;
+    actionValidation?: 'EN_ATTENTE' | 'RETIRER' | 'REMPLACER' | 'FORCER';
+    agentRemplacantId?: string;
+    agentRemplacantNom?: string;
+    force?: boolean;
+    motifConflit?: string;
 }
 
 export interface ReponseCreationActivite {
@@ -74,6 +92,29 @@ export interface PlanningMensuel {
     planningParAgent: { [key: string]: Activite[] };
 }
 
+// ✅ NOUVEAU : DTOs de validation
+export interface ValidationConflit {
+    affectationId: string;
+    action: 'RETIRER' | 'REMPLACER' | 'FORCER';
+    agentRemplacantId?: string;
+    motif?: string;
+}
+
+export interface DecisionValidation {
+    actions: ValidationConflit[];
+    decision: 'VALIDER' | 'RENVOYER_NIVEAU_SUPERIEUR' | 'RENVOYER_PLANIFICATEUR';
+    commentaire?: string;
+}
+
+export interface CompteurValidation {
+    niveau: number;
+    count: number;
+}
+
+// ============================================================
+// SERVICE
+// ============================================================
+
 @Injectable({
     providedIn: 'root'
 })
@@ -81,6 +122,10 @@ export class PlanningService {
     private apiUrl = `${environment.apiUrl}/planning`;
 
     constructor(private http: HttpClient) { }
+
+    // ============================================================
+    // CRUD ACTIVITÉS
+    // ============================================================
 
     creerActivite(activite: Activite): Observable<ReponseCreationActivite> {
         return this.http.post<ReponseCreationActivite>(`${this.apiUrl}/activites`, activite);
@@ -102,6 +147,10 @@ export class PlanningService {
     getActiviteById(id: string): Observable<Activite> {
         return this.http.get<Activite>(`${this.apiUrl}/activites/${id}`);
     }
+
+    // ============================================================
+    // DISPONIBILITÉ / PLANNING
+    // ============================================================
 
     verifierDisponibilite(agentId: string, debut: string, fin: string): Observable<Disponibilite> {
         const params = new HttpParams().set('agentId', agentId).set('debut', debut).set('fin', fin);
@@ -129,7 +178,7 @@ export class PlanningService {
     }
 
     // ============================================================
-    // ✅ UPLOAD / TÉLÉCHARGEMENT DE FICHIERS
+    // UPLOAD / TÉLÉCHARGEMENT DE FICHIERS
     // ============================================================
 
     uploadTdr(id: string, file: File, conforme: boolean): Observable<Activite> {
@@ -177,5 +226,31 @@ export class PlanningService {
 
     renvoyerOrdreMission(id: string): Observable<void> {
         return this.http.post<void>(`${this.apiUrl}/activites/${id}/renvoyer-ordre-mission`, null);
+    }
+
+    // ============================================================
+    // ✅ NOUVEAU : WORKFLOW DE VALIDATION
+    // ============================================================
+
+    /** Liste des activités à valider pour le niveau du validateur connecté. */
+    getActivitesAValider(): Observable<Activite[]> {
+        return this.http.get<Activite[]>(`${this.apiUrl}/validation/a-valider`);
+    }
+
+    /** Compteur d'activités à valider (badge). */
+    getCompteurAValider(): Observable<CompteurValidation> {
+        return this.http.get<CompteurValidation>(`${this.apiUrl}/validation/count`);
+    }
+
+    /** Traiter les conflits (retirer / remplacer / forcer). */
+    traiterConflits(activiteId: string, actions: ValidationConflit[]): Observable<Activite> {
+        return this.http.post<Activite>(
+            `${this.apiUrl}/validation/${activiteId}/conflits`, actions);
+    }
+
+    /** Décision de validation : VALIDER, RENVOYER_NIVEAU_SUPERIEUR, RENVOYER_PLANIFICATEUR. */
+    valider(activiteId: string, decision: DecisionValidation): Observable<Activite> {
+        return this.http.post<Activite>(
+            `${this.apiUrl}/validation/${activiteId}/valider`, decision);
     }
 }
