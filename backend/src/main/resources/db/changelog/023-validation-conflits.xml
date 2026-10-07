@@ -34,6 +34,13 @@
     </changeSet>
 
     <changeSet id="023-validation-conflits-4" author="pnlp">
+        <comment>Ajout du niveau de validation actuel aux activités</comment>
+        <addColumn tableName="activites">
+            <column name="niveau_validation_actuel" type="INTEGER"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="023-validation-conflits-5" author="pnlp">
         <comment>Initialiser niveau validation pour activités existantes</comment>
         <sql>
             UPDATE activites
@@ -43,7 +50,7 @@
         </sql>
     </changeSet>
 
-    <changeSet id="023-validation-conflits-5" author="pnlp">
+    <changeSet id="023-validation-conflits-6" author="pnlp">
         <comment>Créer les profils validateurs</comment>
         <sql>
             INSERT INTO profils (id, code, libelle, description, niveau, actif, created_at, updated_at)
