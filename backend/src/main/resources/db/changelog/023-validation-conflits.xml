@@ -70,4 +70,11 @@
         </sql>
     </changeSet>
 
+    <changeSet id="023-validation-conflits-7" author="pnlp">
+        <comment>Ajout du niveau de renvoi aux activités</comment>
+        <addColumn tableName="activites">
+            <column name="renvoye_par_niveau" type="INTEGER"/>
+        </addColumn>
+    </changeSet>
+
 </databaseChangeLog>
