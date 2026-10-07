@@ -20,6 +20,7 @@
     <include file="db/changelog/023-validation-conflits.xml"/>
     <include file="db/changelog/024-fix-statut-check.xml"/>
     <include file="db/changelog/024-valide-par-niveau.xml"/>
+    <include file="db/changelog/025-seed-admin.yaml"/>
 
 
 </databaseChangeLog>

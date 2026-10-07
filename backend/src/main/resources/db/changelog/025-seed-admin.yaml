@@ -1,0 +1,73 @@
+databaseChangeLog:
+  - changeSet:
+      id: 025-seed-super-admin-profil
+      author: pnlp
+      comment: "Profil SUPER_ADMIN s'il n'existe pas"
+      changes:
+        - sql:
+            sql: |
+              INSERT INTO profils (id, code, libelle, description, niveau, actif, created_at, updated_at)
+              SELECT
+                gen_random_uuid(),
+                'SUPER_ADMIN',
+                'Super Administrateur',
+                'Accès complet au système',
+                100,
+                true,
+                NOW(),
+                NOW()
+              WHERE NOT EXISTS (
+                SELECT 1 FROM profils WHERE code = 'SUPER_ADMIN'
+              );
+      rollback:
+        - sql:
+            sql: "DELETE FROM profils WHERE code = 'SUPER_ADMIN';"
+
+  - changeSet:
+      id: 025-seed-admin-user
+      author: pnlp
+      comment: "Utilisateur admin (sans colonne profil_id)"
+      changes:
+        - sql:
+            sql: |
+              INSERT INTO utilisateurs (id, username, password, email, actif, created_at, updated_at)
+              SELECT
+                gen_random_uuid(),
+                'admin',
+                '$2a$10$wzGXeZyDOatUGtK0.jHWSe6GefomMgEgPapIanjmNbL/byFErbSPu',
+                'admin@pnlp.tg',
+                true,
+                NOW(),
+                NOW()
+              WHERE NOT EXISTS (
+                SELECT 1 FROM utilisateurs WHERE username = 'admin'
+              );
+      rollback:
+        - sql:
+            sql: "DELETE FROM utilisateurs WHERE username = 'admin';"
+
+  - changeSet:
+      id: 025-seed-admin-profil-link
+      author: pnlp
+      comment: "Lier admin ↔ SUPER_ADMIN via utilisateur_profils"
+      changes:
+        - sql:
+            sql: |
+              INSERT INTO utilisateur_profils (utilisateur_id, profil_id)
+              SELECT u.id, p.id
+              FROM utilisateurs u
+              CROSS JOIN profils p
+              WHERE u.username = 'admin'
+                AND p.code = 'SUPER_ADMIN'
+                AND NOT EXISTS (
+                  SELECT 1
+                  FROM utilisateur_profils up
+                  WHERE up.utilisateur_id = u.id
+                    AND up.profil_id = p.id
+                );
+      rollback:
+        - sql:
+            sql: |
+              DELETE FROM utilisateur_profils
+              WHERE utilisateur_id IN (SELECT id FROM utilisateurs WHERE username = 'admin')
+                AND profil_id IN (SELECT id FROM profils WHERE code = 'SUPER_ADMIN');
