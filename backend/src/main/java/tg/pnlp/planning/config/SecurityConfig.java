@@ -158,16 +158,17 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // Origines autorisées : local + frontend Render (+ valeur de app.frontend-url)
-        config.setAllowedOrigins(List.of(
+        // Liste explicite — pas de wildcard avec allowCredentials
+        config.setAllowedOrigins(java.util.Arrays.asList(
                 "http://localhost:4200",
-                "https://pnlp-planning-frontend.onrender.com",
-                frontendUrl
+                "https://pnlp-planning-frontend.onrender.com"
         ));
 
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
-        config.setExposedHeaders(List.of("Authorization"));
+        config.setAllowedMethods(java.util.Arrays.asList(
+                "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
+        ));
+        config.setAllowedHeaders(java.util.Arrays.asList("*"));
+        config.setExposedHeaders(java.util.Arrays.asList("Authorization"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
 
