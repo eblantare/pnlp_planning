@@ -19,6 +19,7 @@
     <include file="db/changelog/013-add-au-programme.xml"/>
     <include file="db/changelog/023-validation-conflits.xml"/>
     <include file="db/changelog/024-fix-statut-check.xml"/>
+    <include file="db/changelog/024-valide-par-niveau.xml"/>
 
 
 </databaseChangeLog>

@@ -1,100 +1,104 @@
-spring:
-  application:
-    name: pnlp-planning
+  spring:
+    application:
+      name: pnlp-planning
 
-  # ✅ Profil local activé par défaut (charge application-local.yml)
-  profiles:
-    active: local
+    # Profil local par défaut.
+    # Sur Render, nous définirons SPRING_PROFILES_ACTIVE=prod.
+    profiles:
+      active: ${SPRING_PROFILES_ACTIVE:local}
 
-  datasource:
-    url: jdbc:postgresql://localhost:5432/pnlp_planning
-    username: postgres
-    password: postgres
-    driver-class-name: org.postgresql.Driver
-    hikari:
-      maximum-pool-size: 10
-      minimum-idle: 5
-      idle-timeout: 300000
-      connection-timeout: 20000
-      max-lifetime: 1200000
+    datasource:
+      # En local : PostgreSQL sur localhost.
+      # Sur Render : les variables d'environnement Render prennent le dessus.
+      url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/pnlp_planning}
+      username: ${SPRING_DATASOURCE_USERNAME:postgres}
+      password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+      driver-class-name: org.postgresql.Driver
 
-  jpa:
-    hibernate:
-      ddl-auto: validate
-    show-sql: false
-    properties:
+      hikari:
+        maximum-pool-size: 10
+        minimum-idle: 5
+        idle-timeout: 300000
+        connection-timeout: 20000
+        max-lifetime: 1200000
+
+    jpa:
       hibernate:
-        format_sql: true
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-        jdbc:
-          batch_size: 20
-        order_inserts: true
-        order_updates: true
+        ddl-auto: validate
+      show-sql: false
+      properties:
+        hibernate:
+          format_sql: true
+          dialect: org.hibernate.dialect.PostgreSQLDialect
+          jdbc:
+            batch_size: 20
+          order_inserts: true
+          order_updates: true
 
-  liquibase:
-    change-log: classpath:db/changelog/db.changelog-master.xml
-    enabled: true
-
-  # ✅ Config upload de fichiers
-  servlet:
-    multipart:
+    liquibase:
+      change-log: classpath:db/changelog/db.changelog-master.xml
       enabled: true
-      max-file-size: 20MB
-      max-request-size: 25MB
 
-  mail:
-    host: smtp.gmail.com
-    port: 587
-    username: ${MAIL_USERNAME:dev@example.com}
-    password: ${MAIL_PASSWORD:dev-password}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
-            required: true
+    # Configuration upload de fichiers
+    servlet:
+      multipart:
+        enabled: true
+        max-file-size: 20MB
+        max-request-size: 25MB
 
-  jackson:
-    serialization:
-      write-dates-as-timestamps: false
-    time-zone: Africa/Lome
+    mail:
+      host: smtp.gmail.com
+      port: 587
+      username: ${MAIL_USERNAME:dev@example.com}
+      password: ${MAIL_PASSWORD:dev-password}
+      properties:
+        mail:
+          smtp:
+            auth: true
+            starttls:
+              enable: true
+              required: true
 
-server:
-  port: 8080
-  servlet:
-    context-path: /api
+    jackson:
+      serialization:
+        write-dates-as-timestamps: false
+      time-zone: Africa/Lome
 
-app:
-  jwt:
-    secret: ${JWT_SECRET:dev-secret-key-pnlp-2026-changez-en-prod-32chars-min}
-    expiration-ms: 86400000
+  server:
+    port: ${PORT:8080}          # ← Render injecte PORT (ex: 10000)
+    servlet:
+      context-path: /api
 
-  frontend-url: ${FRONTEND_URL:http://localhost:4200}
+  app:
+    jwt:
+      secret: ${JWT_SECRET:dev-secret-key-pnlp-2026-changez-en-prod-32chars-min}
+      expiration-ms: 86400000
 
-  # ✅ Dossier de stockage des fichiers uploadés
-  upload:
-    dir: ${UPLOAD_DIR:uploads}
+    frontend-url: ${FRONTEND_URL:http://localhost:4200}
 
-  password-reset:
-    token-expiration-minutes: 30
+    # Dossier de stockage des fichiers uploadés
+    upload:
+      dir: ${UPLOAD_DIR:uploads}
 
-springdoc:
-  api-docs:
-    path: /v3/api-docs
-  swagger-ui:
-    path: /swagger-ui.html
-    operations-sorter: method
-    tags-sorter: alpha
+    password-reset:
+      token-expiration-minutes: 30
 
-logging:
-  level:
-    tg.pnlp.planning: DEBUG
-    org.springframework.security: INFO
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-  file:
-    name: logs/pnlp-planning.log
+  springdoc:
+    api-docs:
+      path: /v3/api-docs
+    swagger-ui:
+      path: /swagger-ui.html
+      operations-sorter: method
+      tags-sorter: alpha
+
+  logging:
+    level:
+      tg.pnlp.planning: DEBUG
+      org.springframework.security: INFO
+      org.hibernate.SQL: DEBUG
+      org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    pattern:
+      console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+      file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file:
+
