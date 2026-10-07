@@ -1,5 +1,5 @@
 // src/environments/environment.prod.ts
 export const environment = {
     production: true,
-    apiUrl: '/api'
+    apiUrl: 'https://pnlp-planning-bd.onrender.com/api'
 };
