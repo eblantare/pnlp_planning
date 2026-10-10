@@ -105,21 +105,16 @@ export class PlanningComponent implements OnInit {
     conflitsDetectes: ConflitAgent[] = [];
     activiteEnAttente: Activite | null = null;
 
-    // ============================================================
-    // ✅ NOUVEAU : Modal de traitement des conflits par le validateur
-    // ============================================================
     showValidationModal = false;
     activiteEnValidation: Activite | null = null;
     conflitsAValider: ConflitEditable[] = [];
     commentaireValidation = '';
     isLoadingValidation = false;
 
-    // ✅ Remplaçants dans le modal de validation
     remplacantsValidation: Agent[] = [];
     isLoadingRemplacantsValidation = false;
     indexRemplacantValidationEnCours: number | null = null;
 
-    // Modal remplacement (formulaire planificateur)
     slotsARemplacer: { [groupIndex: number]: { district: string }[] } = {};
     remplacementEnCours: { groupIndex: number; slotIndex: number } | null = null;
     remplacantsDisponibles: Agent[] = [];
@@ -187,10 +182,6 @@ export class PlanningComponent implements OnInit {
         return statut === 'EN_ATTENTE_VALIDATION' || statut === 'RENVOYE_POUR_CORRECTION';
     }
 
-    // ============================================================
-    // ✅ NOUVEAU : Vérifie si l'utilisateur peut traiter les conflits
-    //             d'une activité donnée (validateur du bon niveau ou SUPER_ADMIN)
-    // ============================================================
     peutTraiterConflits(activite: Activite): boolean {
         if (!activite || activite.statut !== 'EN_ATTENTE_VALIDATION') return false;
         const niveauUtilisateur = this.permissionService.getNiveauValidation();
@@ -743,11 +734,15 @@ export class PlanningComponent implements OnInit {
                 next: (reponse) => {
                     if (reponse.succes) {
                         if (this.estEnAttenteValidation(reponse.activite?.statut)) {
+                            // ✅ FIX : uploader le TDR AVANT d'afficher le modal conflits
                             this.conflitsDetectes = reponse.conflits || [];
                             this.activiteEnAttente = reponse.activite || null;
-                            this.closeForm();
-                            this.showConflitModal = true;
-                            this.isLoading = false;
+
+                            this.uploaderFichiersSansFinaliser(idActivite, () => {
+                                this.closeForm();
+                                this.showConflitModal = true;
+                                this.isLoading = false;
+                            });
                             return;
                         }
                         this.uploaderFichiersEtFinaliser(idActivite, 'Activité modifiée');
@@ -774,11 +769,15 @@ export class PlanningComponent implements OnInit {
                         }
 
                         if (this.estEnAttenteValidation(reponse.activite?.statut)) {
+                            // ✅ FIX : uploader le TDR AVANT d'afficher le modal conflits
                             this.conflitsDetectes = reponse.conflits || [];
                             this.activiteEnAttente = reponse.activite || null;
-                            this.closeForm();
-                            this.showConflitModal = true;
-                            this.isLoading = false;
+
+                            this.uploaderFichiersSansFinaliser(reponse.activite.id, () => {
+                                this.closeForm();
+                                this.showConflitModal = true;
+                                this.isLoading = false;
+                            });
                             return;
                         }
 
@@ -854,6 +853,47 @@ export class PlanningComponent implements OnInit {
             error: (err) => {
                 this.showError('Erreur upload fichier: ' + (err.error?.message || err.message));
                 this.isLoading = false;
+            }
+        });
+    }
+
+    /**
+     * ✅ Upload les fichiers SANS changer le statut.
+     * Utilisé quand l'activité part en EN_ATTENTE_VALIDATION :
+     * le TDR doit être uploadé et conservé jusqu'à ce que le validateur valide.
+     */
+    private uploaderFichiersSansFinaliser(activiteId: string, onComplete: () => void): void {
+        const uploads: Observable<any>[] = [];
+
+        if (this.tdrFile) {
+            uploads.push(this.planningService.uploadTdr(
+                activiteId, this.tdrFile, this.tdrConforme));
+        }
+        if (this.ordreMissionFile) {
+            uploads.push(this.planningService.uploadOrdreMission(
+                activiteId, this.ordreMissionFile, this.ordreMissionConforme));
+        }
+        if (this.lettreInvitationFile) {
+            uploads.push(this.planningService.uploadLettreInvitation(
+                activiteId, this.lettreInvitationFile, this.lettreInvitationConforme));
+        }
+
+        if (uploads.length === 0) {
+            onComplete();
+            return;
+        }
+
+        const sequential$ = uploads.reduce(
+            (acc, task) => acc.pipe(concatMap(() => task)),
+            of(null) as Observable<any>
+        );
+
+        sequential$.subscribe({
+            next: () => onComplete(),
+            error: (err) => {
+                this.showError('Erreur upload fichier: ' + (err.error?.message || err.message));
+                this.isLoading = false;
+                onComplete();
             }
         });
     }
@@ -959,13 +999,15 @@ export class PlanningComponent implements OnInit {
         if (!activite.id) return;
         if (activite.statut === nouveauStatut) return;
 
-        if (this.estEnAttenteValidation(activite.statut)) {
+        // ✅ EN_ATTENTE_VALIDATION ne peut être modifié que par un validateur
+        if (activite.statut === 'EN_ATTENTE_VALIDATION') {
             this.showError(
                 'Cette activité est en attente de validation. Seul un validateur peut la traiter.'
             );
             this.loadPlanning();
             return;
         }
+        // ✅ RENVOYE_POUR_CORRECTION : le planificateur doit passer par le formulaire pour re-uploader le TDR
 
         if (activite.statut === 'PLANIFIEE' && nouveauStatut === 'EN_COURS') {
             const erreurs: string[] = [];
@@ -1235,17 +1277,15 @@ export class PlanningComponent implements OnInit {
             peutCrud && !activite.auProgramme && statut === 'EN_COURS' &&
             !!activite.ordreMissionFilename;
 
-        // ✅ CORRIGÉ : RENVOYE_POUR_CORRECTION doit être modifiable par le planificateur
         const modifiable =
             peutCrud && (
                 statut === 'BROUILLON'
                 || statut === 'PLANIFIEE'
-                || statut === 'RENVOYE_POUR_CORRECTION'   // ✅ AJOUTÉ
+                || statut === 'RENVOYE_POUR_CORRECTION'
             );
 
         const actions: ActionButton[] = [];
 
-        // ✅ NOUVEAU : bouton "Traiter les conflits" pour les validateurs du bon niveau
         if (this.peutTraiterConflits(activite)) {
             actions.push({
                 id: 'traiter-conflits',
@@ -1313,13 +1353,9 @@ export class PlanningComponent implements OnInit {
             case 'delete': this.deleteActivite(activite); break;
             case 'renvoyer-tdr': this.renvoyerTdr(activite); break;
             case 'renvoyer-om': this.renvoyerOrdreMission(activite); break;
-            case 'traiter-conflits': this.ouvrirValidation(activite); break;   // ✅ NOUVEAU
+            case 'traiter-conflits': this.ouvrirValidation(activite); break;
         }
     }
-
-    // ============================================================
-    // ✅ NOUVEAU : WORKFLOW DE VALIDATION (modal intégré)
-    // ============================================================
 
     ouvrirValidation(activite: Activite): void {
         this.activiteEnValidation = activite;
@@ -1351,20 +1387,14 @@ export class PlanningComponent implements OnInit {
         this.remplacantsValidation = [];
     }
 
-    /**
-     * ✅ MODIFIÉ : clic sur une action déjà sélectionnée → désélectionne
-     * (revient à EN_ATTENTE).
-     */
     setActionValidation(index: number, action: 'RETIRER' | 'REMPLACER' | 'FORCER'): void {
         const c = this.conflitsAValider[index];
         if (!c) return;
 
-        // ✅ Si on clique sur l'action déjà active → on annule la sélection
         if (c.action === action) {
             c.action = 'EN_ATTENTE';
             c.agentRemplacantId = undefined;
             c.agentRemplacantNom = undefined;
-            // Ferme la sélection de remplaçant si ouverte
             if (this.indexRemplacantValidationEnCours === index) {
                 this.indexRemplacantValidationEnCours = null;
                 this.remplacantsValidation = [];
@@ -1372,7 +1402,6 @@ export class PlanningComponent implements OnInit {
             return;
         }
 
-        // Sinon, on applique la nouvelle action
         c.action = action;
 
         if (action !== 'REMPLACER') {
@@ -1383,7 +1412,6 @@ export class PlanningComponent implements OnInit {
                 this.remplacantsValidation = [];
             }
         } else {
-            // Ouvre directement la sélection du remplaçant
             this.ouvrirSelectionRemplacant(index);
         }
     }
@@ -1448,7 +1476,7 @@ export class PlanningComponent implements OnInit {
 
     validerConflits(): void {
         if (!this.activiteEnValidation?.id) return;
-        if (!this.tousConflitsTraites()) {   // ✅ Gardé pour Valider
+        if (!this.tousConflitsTraites()) {
             this.showError('Veuillez traiter tous les conflits avant de valider');
             return;
         }
@@ -1482,12 +1510,10 @@ export class PlanningComponent implements OnInit {
 
     renvoyerNiveauSuperieur(): void {
         if (!this.activiteEnValidation?.id) return;
-        // ✅ MODIFIÉ : plus de vérification "tous conflits traités"
-        // On peut renvoyer au niveau supérieur même si rien n'est décidé.
         if (!confirm('Renvoyer cette activité au niveau supérieur ?')) return;
 
         const actions: ValidationConflit[] = this.conflitsAValider
-            .filter(c => c.action !== 'EN_ATTENTE')   // ✅ On n'envoie que les actions choisies
+            .filter(c => c.action !== 'EN_ATTENTE')
             .map(c => ({
                 affectationId: c.affectationId,
                 action: c.action as any,

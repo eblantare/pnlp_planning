@@ -6,38 +6,31 @@
                             http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
 
     <changeSet id="023-validation-conflits-1" author="pnlp">
-        <comment>Ajout colonnes conflits sur affectations</comment>
-        <addColumn tableName="affectations">
-            <column name="en_conflit" type="BOOLEAN" defaultValueBoolean="false"/>
-            <column name="action_validation" type="VARCHAR(20)"/>
-            <column name="force" type="BOOLEAN" defaultValueBoolean="false"/>
-            <column name="agent_remplacant_id" type="UUID"/>
-            <column name="motif_conflit" type="VARCHAR(500)"/>
-        </addColumn>
+        <comment>Ajout colonnes conflits sur affectations (idempotent)</comment>
+        <sql>
+            ALTER TABLE affectations ADD COLUMN IF NOT EXISTS en_conflit BOOLEAN DEFAULT FALSE;
+            ALTER TABLE affectations ADD COLUMN IF NOT EXISTS action_validation VARCHAR(20);
+            ALTER TABLE affectations ADD COLUMN IF NOT EXISTS force BOOLEAN DEFAULT FALSE;
+            ALTER TABLE affectations ADD COLUMN IF NOT EXISTS agent_remplacant_id UUID;
+            ALTER TABLE affectations ADD COLUMN IF NOT EXISTS motif_conflit VARCHAR(500);
+        </sql>
     </changeSet>
 
-    <changeSet id="023-validation-conflits-2" author="pnlp">
-        <comment>FK agent remplaçant</comment>
-        <addForeignKeyConstraint
-                baseTableName="affectations"
-                baseColumnNames="agent_remplacant_id"
-                constraintName="fk_affectation_agent_remplacant"
-                referencedTableName="agents"
-                referencedColumnNames="id"/>
-    </changeSet>
+    <!-- ✅ Changeset 2 SUPPRIMÉ : la FK existe déjà en base -->
 
     <changeSet id="023-validation-conflits-3" author="pnlp">
-        <comment>Téléphone utilisateur pour SMS</comment>
-        <addColumn tableName="utilisateurs">
-            <column name="telephone" type="VARCHAR(20)"/>
-        </addColumn>
+        <comment>Téléphone utilisateur (idempotent)</comment>
+        <sql>
+            ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS telephone VARCHAR(20);
+        </sql>
     </changeSet>
 
     <changeSet id="023-validation-conflits-4" author="pnlp">
-        <comment>Ajout du niveau de validation actuel aux activités</comment>
-        <addColumn tableName="activites">
-            <column name="niveau_validation_actuel" type="INTEGER"/>
-        </addColumn>
+        <comment>Niveau validation actuel + validé par niveau (idempotent)</comment>
+        <sql>
+            ALTER TABLE activites ADD COLUMN IF NOT EXISTS niveau_validation_actuel INTEGER;
+            ALTER TABLE activites ADD COLUMN IF NOT EXISTS valide_par_niveau INTEGER;
+        </sql>
     </changeSet>
 
     <changeSet id="023-validation-conflits-5" author="pnlp">
@@ -71,10 +64,10 @@
     </changeSet>
 
     <changeSet id="023-validation-conflits-7" author="pnlp">
-        <comment>Ajout du niveau de renvoi aux activités</comment>
-        <addColumn tableName="activites">
-            <column name="renvoye_par_niveau" type="INTEGER"/>
-        </addColumn>
+        <comment>Niveau de renvoi (idempotent)</comment>
+        <sql>
+            ALTER TABLE activites ADD COLUMN IF NOT EXISTS renvoye_par_niveau INTEGER;
+        </sql>
     </changeSet>
 
 </databaseChangeLog>

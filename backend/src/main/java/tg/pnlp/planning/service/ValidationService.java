@@ -10,7 +10,7 @@ import tg.pnlp.planning.exception.BusinessException;
 import tg.pnlp.planning.exception.ResourceNotFoundException;
 import tg.pnlp.planning.repository.*;
 import tg.pnlp.planning.security.ProfilCodeNormalizer;
-
+import java.util.Objects;
 import java.util.*;
 
 @Service
@@ -22,6 +22,7 @@ public class ValidationService {
     private final AffectationRepository affectationRepository;
     private final AgentRepository agentRepository;
     private final NotificationService notificationService;
+    private final EmailService emailService;   // ✅ AJOUT
 
     // ============================================================
     // NIVEAU DU VALIDATEUR CONNECTÉ
@@ -128,6 +129,9 @@ public class ValidationService {
                 activite.setNiveauValidationActuel(null);
                 activiteRepository.save(activite);
 
+                // ✅ FIX : envoyer le TDR aux agents après validation finale
+                envoyerTdrApresValidation(activite);
+
                 notificationService.notifierValidationFinale(activite);
                 log.info("Activité '{}' validée par niveau {}", activite.getTitre(), niveauActuel);
             }
@@ -227,6 +231,68 @@ public class ValidationService {
     // ============================================================
     // HELPERS PRIVÉS
     // ============================================================
+    /**
+     * ✅ Envoie le TDR aux agents après la validation finale (passage en PLANIFIEE).
+     *
+     * Conditions :
+     *   - Activité NON au programme
+     *   - TDR présent ET conforme
+     *   - TDR pas encore envoyé
+     *
+     * Les erreurs d'envoi ne bloquent pas la validation (log only).
+     */
+    private void envoyerTdrApresValidation(Activite activite) {
+        // 1. Activité au programme → pas de TDR
+        if (Boolean.TRUE.equals(activite.getAuProgramme())) {
+            log.info("Activité '{}' au programme — pas d'envoi TDR", activite.getTitre());
+            return;
+        }
+
+        // 2. TDR manquant ou non conforme
+        if (activite.getTdrPath() == null) {
+            log.warn("Activité '{}' — pas de TDR attaché, envoi impossible", activite.getTitre());
+            return;
+        }
+        if (!Boolean.TRUE.equals(activite.getTdrConforme())) {
+            log.warn("Activité '{}' — TDR non conforme, envoi impossible", activite.getTitre());
+            return;
+        }
+
+        // 3. Déjà envoyé → skip
+        if (Boolean.TRUE.equals(activite.getTdrEmailEnvoye())) {
+            log.info("Activité '{}' — TDR déjà envoyé, skip", activite.getTitre());
+            return;
+        }
+
+        try {
+            // 4. Récupérer les agents actifs de l'activité
+            List<Agent> agents = affectationRepository.findActivesByActiviteId(activite.getId())
+                    .stream()
+                    .map(Affectation::getAgent)
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .toList();
+
+            if (agents.isEmpty()) {
+                log.warn("Activité '{}' — aucun agent actif, pas d'envoi TDR", activite.getTitre());
+                return;
+            }
+
+            // 5. Envoyer le TDR
+            emailService.envoyerTdrAuxAgents(activite, agents);
+
+            // 6. Marquer comme envoyé
+            activite.setTdrEmailEnvoye(true);
+            activiteRepository.save(activite);
+
+            log.info("✅ TDR envoyé aux {} agents après validation de '{}'",
+                    agents.size(), activite.getTitre());
+
+        } catch (Exception e) {
+            log.error("❌ Échec envoi TDR après validation de '{}': {}",
+                    activite.getTitre(), e.getMessage(), e);
+        }
+    }
 
     private void verifierDroitValidation(Activite activite, Set<String> profils) {
         Integer niveauValidateur = getNiveauValidation(profils);
