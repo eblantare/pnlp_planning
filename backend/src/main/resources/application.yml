@@ -1,104 +1,122 @@
-  spring:
-    application:
-      name: pnlp-planning
+spring:
+  application:
+    name: pnlp-planning
 
-    # Profil local par défaut.
-    # Sur Render, nous définirons SPRING_PROFILES_ACTIVE=prod.
-    profiles:
-      active: ${SPRING_PROFILES_ACTIVE:local}
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
 
-    datasource:
-      # En local : PostgreSQL sur localhost.
-      # Sur Render : les variables d'environnement Render prennent le dessus.
-      url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/pnlp_planning}
-      username: ${SPRING_DATASOURCE_USERNAME:postgres}
-      password: ${SPRING_DATASOURCE_PASSWORD:postgres}
-      driver-class-name: org.postgresql.Driver
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/pnlp_planning}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
 
-      hikari:
-        maximum-pool-size: 10
-        minimum-idle: 5
-        idle-timeout: 300000
-        connection-timeout: 20000
-        max-lifetime: 1200000
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+      max-lifetime: 1200000
 
-    jpa:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
       hibernate:
-        ddl-auto: validate
-      show-sql: false
-      properties:
-        hibernate:
-          format_sql: true
-          dialect: org.hibernate.dialect.PostgreSQLDialect
-          jdbc:
-            batch_size: 20
-          order_inserts: true
-          order_updates: true
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
 
-    liquibase:
-      change-log: classpath:db/changelog/db.changelog-master.xml
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+    enabled: true
+
+  servlet:
+    multipart:
       enabled: true
+      max-file-size: 20MB
+      max-request-size: 25MB
 
-    # Configuration upload de fichiers
-    servlet:
-      multipart:
-        enabled: true
-        max-file-size: 20MB
-        max-request-size: 25MB
+  # ✅ MAIL : SMTP générique (Gmail en local, Mailjet en prod)
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:${MAILJET_API_KEY:dev@example.com}}
+    password: ${MAIL_PASSWORD:${MAILJET_SECRET_KEY:dev-password}}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 10000
+          timeout: 10000
+          writetimeout: 10000
 
-    mail:
-      host: smtp.gmail.com
-      port: 587
-      username: ${MAIL_USERNAME:dev@example.com}
-      password: ${MAIL_PASSWORD:dev-password}
-      properties:
-        mail:
-          smtp:
-            auth: true
-            starttls:
-              enable: true
-              required: true
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    time-zone: Africa/Lome
 
-    jackson:
-      serialization:
-        write-dates-as-timestamps: false
-      time-zone: Africa/Lome
+# ============================================================
+# SERVEUR
+# ============================================================
+server:
+  port: ${PORT:8080}
+  servlet:
+    context-path: /api
 
-  server:
-    port: ${PORT:8080}          # ← Render injecte PORT (ex: 10000)
-    servlet:
-      context-path: /api
+# ============================================================
+# APPLICATION
+# ============================================================
+app:
+  jwt:
+    secret: ${JWT_SECRET:dev-secret-key-pnlp-2026-changez-en-prod-32chars-min}
+    expiration-ms: 86400000
 
-  app:
-    jwt:
-      secret: ${JWT_SECRET:dev-secret-key-pnlp-2026-changez-en-prod-32chars-min}
-      expiration-ms: 86400000
+  frontend-url: ${FRONTEND_URL:http://localhost:4200}
 
-    frontend-url: ${FRONTEND_URL:http://localhost:4200}
+  upload:
+    dir: ${UPLOAD_DIR:uploads}
 
-    # Dossier de stockage des fichiers uploadés
-    upload:
-      dir: ${UPLOAD_DIR:uploads}
+  password-reset:
+    token-expiration-minutes: 30
 
-    password-reset:
-      token-expiration-minutes: 30
+# ============================================================
+# CLOUDINARY
+# ============================================================
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}
 
-  springdoc:
-    api-docs:
-      path: /v3/api-docs
-    swagger-ui:
-      path: /swagger-ui.html
-      operations-sorter: method
-      tags-sorter: alpha
+# ============================================================
+# SWAGGER
+# ============================================================
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
 
-  logging:
-    level:
-      tg.pnlp.planning: DEBUG
-      org.springframework.security: INFO
-      org.hibernate.SQL: DEBUG
-      org.hibernate.type.descriptor.sql.BasicBinder: TRACE
-    pattern:
-      console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-      file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-    file:
-
+# ============================================================
+# LOGGING
+# ============================================================
+logging:
+  level:
+    tg.pnlp.planning: DEBUG
+    org.springframework.security: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/pnlp-planning.log
