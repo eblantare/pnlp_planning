@@ -1,3 +1,6 @@
+# ============================================================
+# ✅ CONFIGURATION PRODUCTION — Render + Mailjet API HTTP 443
+# ============================================================
 spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL}
@@ -29,22 +32,17 @@ spring:
     enabled: true
     change-log: classpath:db/changelog/db.changelog-master.xml
 
-  # ✅ MAILJET SMTP (compatible Render Free)
-  mail:
-    host: in-v3.mailjet.com
-    port: 587
-    username: ${MAILJET_API_KEY}
-    password: ${MAILJET_SECRET_KEY}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
-            required: true
-          connectiontimeout: 10000
-          timeout: 10000
-          writetimeout: 10000
+  # ❌ PAS de spring.mail en prod : Render Free bloque les ports SMTP.
+  #    MailjetApiService prend le relais (HTTP 443).
+
+# ============================================================
+# ✅ MAILJET API (HTTP sur port 443) — UTILISÉ EN PRODUCTION
+# ============================================================
+mailjet:
+  api-key: ${MAILJET_API_KEY}
+  secret-key: ${MAILJET_SECRET_KEY}
+  from-email: romain.blantare@gmail.com
+  from-name: PNLP Planning
 
 server:
   port: ${PORT:8080}
@@ -56,6 +54,8 @@ app:
     secret: ${JWT_SECRET}
     expiration-ms: 86400000
   frontend-url: ${FRONTEND_URL:https://pnlp-planning-frontend.onrender.com}
+  password-reset:
+    token-expiration-minutes: 30
 
 cloudinary:
   cloud-name: ${CLOUDINARY_CLOUD_NAME}

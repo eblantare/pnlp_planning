@@ -31,10 +31,12 @@ public class UtilisateurService {
     private final AgentRepository agentRepository;
     private final PasswordEncoder passwordEncoder;
 
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public List<UtilisateurDTO> getAllUtilisateurs() {
-        return utilisateurRepository.findAll().stream()
+        return utilisateurRepository.findAllWithProfilsAndAgent()
+                .stream()
                 .map(this::convertToDTO)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public UtilisateurDTO getUtilisateurById(UUID id) {
@@ -172,37 +174,29 @@ public class UtilisateurService {
     /**
      * ✅ Convertit l'entité en DTO avec la liste complète des profils.
      */
-    private UtilisateurDTO convertToDTO(Utilisateur user) {
-        List<UUID> profilIds = new ArrayList<>();
-        List<String> profilCodes = new ArrayList<>();
-        List<String> profilLibelles = new ArrayList<>();
+    private UtilisateurDTO convertToDTO(Utilisateur u) {
+        return UtilisateurDTO.builder()
+                .id(u.getId())
+                .username(u.getUsername())
+                .email(u.getEmail())
 
-        if (user.getProfils() != null) {
-            user.getProfils().stream()
-                    .sorted(Comparator.comparing(Profil::getCode))
-                    .forEach(p -> {
-                        profilIds.add(p.getId());
-                        profilCodes.add(p.getCode());
-                        profilLibelles.add(p.getLibelle());
-                    });
-        }
+                .profilIds(u.getProfils().stream()
+                        .map(Profil::getId)
+                        .toList())
+                .profilCodes(u.getProfils().stream()
+                        .map(Profil::getCode)
+                        .toList())
+                .profilLibelles(u.getProfils().stream()
+                        .map(Profil::getLibelle)
+                        .toList())
 
-        UtilisateurDTO.UtilisateurDTOBuilder builder = UtilisateurDTO.builder()
-                .id(user.getId())
-                .username(user.getUsername())
-                .email(user.getEmail())
-                .profilIds(profilIds)               // ✅ Nouveau
-                .profilCodes(profilCodes)           // ✅ Nouveau
-                .profilLibelles(profilLibelles)     // ✅ Nouveau
-                .actif(user.getActif())
-                .derniereConnexion(user.getDerniereConnexion())
-                .createdAt(user.getCreatedAt());
+                // ✅ Null-safe : si l'utilisateur n'a pas d'agent
+                .agentId(u.getAgent() != null ? u.getAgent().getId() : null)
+                .agentNom(u.getAgent() != null ? u.getAgent().getNomComplet() : null)
 
-        if (user.getAgent() != null) {
-            builder.agentId(user.getAgent().getId())
-                    .agentNom(user.getAgent().getNomComplet());
-        }
-
-        return builder.build();
+                .actif(Boolean.TRUE.equals(u.getActif()))
+                .derniereConnexion(u.getDerniereConnexion())
+                .createdAt(u.getCreatedAt())
+                .build();
     }
 }

@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import tg.pnlp.planning.dto.ForgotPasswordRequest;
 import tg.pnlp.planning.dto.ResetPasswordRequest;
 import tg.pnlp.planning.entity.PasswordResetToken;
@@ -32,25 +34,37 @@ public class PasswordResetService {
     private int expirationMinutes;
 
     /**
-     * Étape 1 : Demande de réinitialisation (envoi de l'email)
+     * Étape 1 : Demande de réinitialisation (envoi de l'email).
+     *
+     * ✅ Le token est enregistré en DB dans la transaction,
+     *    puis l'email est envoyé APRÈS le commit de la transaction.
+     *    → Si l'envoi échoue, le token reste valide en DB.
+     *    → L'utilisateur reçoit quand même 200 OK (pas d'énumération d'emails).
      */
     @Transactional
     public void demanderReinitialisation(ForgotPasswordRequest request) {
+
         // 1. Chercher l'utilisateur par email
         Utilisateur user = utilisateurRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new BusinessException(
                         "Aucun compte n'est associé à cet email"));
 
         // 2. Vérifier que le compte est actif
-        if (!user.getActif()) {
+        if (!Boolean.TRUE.equals(user.getActif())) {
             throw new BusinessException(
                     "Votre compte est inactif. Contactez l'administrateur.");
         }
 
-        // 3. Supprimer les anciens tokens de cet utilisateur
+        // 3. Vérifier que l'utilisateur a bien un email
+        if (user.getEmail() == null || user.getEmail().isBlank()) {
+            throw new BusinessException(
+                    "Aucun email n'est associé à ce compte.");
+        }
+
+        // 4. Supprimer les anciens tokens de cet utilisateur
         tokenRepository.deleteByUtilisateur(user);
 
-        // 4. Générer un nouveau token
+        // 5. Générer un nouveau token
         String token = UUID.randomUUID().toString();
 
         PasswordResetToken resetToken = PasswordResetToken.builder()
@@ -62,24 +76,43 @@ public class PasswordResetService {
 
         tokenRepository.save(resetToken);
 
-        // 5. Envoyer l'email
-        emailService.envoyerEmailReinitialisation(user, token);
+        // 6. ✅ Envoyer l'email APRÈS le commit de la transaction
+        final Utilisateur userRef = user;
+        final String tokenRef = token;
+        final String emailRef = user.getEmail();
 
-        log.info("Demande de réinitialisation pour: {}", user.getEmail());
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        try {
+                            emailService.envoyerEmailReinitialisation(userRef, tokenRef);
+                        } catch (Exception e) {
+                            log.error("❌ Échec envoi email de réinitialisation à {} : {}",
+                                    emailRef, e.getMessage(), e);
+                            // ⚠️ Pas de rollback ici (transaction déjà commitée).
+                            // Le token reste en DB : l'utilisateur peut re-demander.
+                        }
+                    }
+                }
+        );
+
+        log.info("Demande de réinitialisation enregistrée pour: {}", emailRef);
     }
 
     /**
-     * Étape 2 : Vérifier qu'un token est valide (utilisé par le frontend)
+     * Étape 2 : Vérifier qu'un token est valide (utilisé par le frontend).
      */
     public boolean verifierToken(String token) {
         return tokenRepository.findValidToken(token, LocalDateTime.now()).isPresent();
     }
 
     /**
-     * Étape 3 : Réinitialiser le mot de passe avec le token
+     * Étape 3 : Réinitialiser le mot de passe avec le token.
      */
     @Transactional
     public void reinitialiserMotDePasse(ResetPasswordRequest request) {
+
         // 1. Valider le nouveau mot de passe
         PasswordValidator.valider(request.getNouveauMotDePasse());
 

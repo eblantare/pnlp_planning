@@ -25,7 +25,6 @@ public interface UtilisateurRepository extends JpaRepository<Utilisateur, UUID> 
 
     List<Utilisateur> findByActifTrue();
 
-    // ✅ MODIFIÉ : chercher par profil (via la table N-N)
     @Query("SELECT DISTINCT u FROM Utilisateur u JOIN u.profils p WHERE p.id = :profilId")
     List<Utilisateur> findByProfilId(@Param("profilId") UUID profilId);
 
@@ -34,11 +33,15 @@ public interface UtilisateurRepository extends JpaRepository<Utilisateur, UUID> 
     boolean existsByEmailAndIdNot(@Param("email") String email,
                                   @Param("id") UUID id);
 
-    // ✅ NOUVEAU : charger l'utilisateur avec ses profils (pour le login)
     @Query("SELECT DISTINCT u FROM Utilisateur u LEFT JOIN FETCH u.profils WHERE u.username = :username")
     Optional<Utilisateur> findByUsernameWithProfils(@Param("username") String username);
-    // Ajouter dans UtilisateurRepository :
 
     @Query("SELECT DISTINCT u FROM Utilisateur u JOIN u.profils p WHERE p.code = :code AND u.actif = true")
     List<Utilisateur> findByProfilCode(@Param("code") String code);
+
+    // ✅ AJOUT — charge profils ET agent en une seule requête
+    @Query("SELECT DISTINCT u FROM Utilisateur u " +
+            "LEFT JOIN FETCH u.profils " +
+            "LEFT JOIN FETCH u.agent")
+    List<Utilisateur> findAllWithProfilsAndAgent();
 }

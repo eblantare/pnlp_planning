@@ -225,12 +225,19 @@ public class PlanningService {
         List<ConflitAgentDTO> conflits = new ArrayList<>();
         if (activite.getDateDebut() == null || activite.getDateFin() == null) return conflits;
 
-        for (UUID agentId : agentIds) {
+        // ✅ Dédoublonner les agentIds AVANT la boucle
+        List<UUID> agentIdsUniques = agentIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        for (UUID agentId : agentIdsUniques) {
             if (agentIdsForces.contains(agentId)) continue;
 
             Agent agent = agentRepository.findById(agentId)
                     .orElseThrow(() -> new ResourceNotFoundException("Agent non trouvé: " + agentId));
 
+            // --- indisponibilités (inchangé) ---
             List<Indisponibilite> indispos = indisponibiliteRepository
                     .findByAgentIdAndDateDebutLessThanEqualAndDateFinGreaterThanEqual(
                             agentId, activite.getDateFin(), activite.getDateDebut());
@@ -244,6 +251,7 @@ public class PlanningService {
                         .build());
             }
 
+            // --- affectations simultanées (inchangé) ---
             List<Affectation> affectations = affectationRepository
                     .findByAgentIdAndActiviteDateDebutLessThanEqualAndActiviteDateFinGreaterThanEqual(
                             agentId, activite.getDateFin(), activite.getDateDebut());
@@ -279,7 +287,17 @@ public class PlanningService {
                         .build());
             }
         }
-        return conflits;
+
+        // ✅ DÉDOUBLONNAGE FINAL : une seule ligne par (agentId, typeConflit, activiteConflit)
+        Map<String, ConflitAgentDTO> uniques = new LinkedHashMap<>();
+        for (ConflitAgentDTO c : conflits) {
+            String cle = c.getAgentId() + "|" + c.getTypeConflit() + "|"
+                    + (c.getActiviteConflit() != null ? c.getActiviteConflit() : "")
+                    + "|" + (c.getMotif() != null ? c.getMotif() : "");
+            uniques.putIfAbsent(cle, c);
+        }
+
+        return new ArrayList<>(uniques.values());
     }
 
     /**

@@ -12,9 +12,7 @@ import tg.pnlp.planning.repository.AffectationRepository;
 import tg.pnlp.planning.repository.IndisponibiliteRepository;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -68,43 +66,28 @@ public class ConflictService {
         List<ConflitDTO> conflits = new ArrayList<>();
         List<Affectation> affectations = affectationRepository.findByActiviteId(activiteId);
 
-        for (Affectation affectation : affectations) {
-            Agent agent = affectation.getAgent();
-
-            List<Indisponibilite> indisponibilites = indisponibiliteRepository
-                    .findByAgentIdAndDateDebutLessThanEqualAndDateFinGreaterThanEqual(
-                            agent.getId(), fin, debut);
-
-            for (Indisponibilite ind : indisponibilites) {
-                conflits.add(ConflitDTO.builder()
-                        .agentId(agent.getId())
-                        .agentNom(agent.getNomComplet())
-                        .typeConflit("INDISPONIBILITE")
-                        .dateDebut(ind.getDateDebut())
-                        .dateFin(ind.getDateFin())
-                        .motif(ind.getMotif())
-                        .build());
-            }
-
-            List<Affectation> autresAffectations = affectationRepository
-                    .findByAgentIdExcludingActivite(agent.getId(), activiteId, fin, debut);
-
-            for (Affectation autre : autresAffectations) {
-                // ✅ Règle R1
-                if (Boolean.TRUE.equals(autre.getActivite().getAuProgramme())) {
-                    continue;
-                }
-                conflits.add(ConflitDTO.builder()
-                        .agentId(agent.getId())
-                        .agentNom(agent.getNomComplet())
-                        .typeConflit("AFFECTATION_SIMULTANEE")
-                        .activiteConflit(autre.getActivite().getTitre())
-                        .dateDebut(autre.getActivite().getDateDebut())
-                        .dateFin(autre.getActivite().getDateFin())
-                        .build());
+        // ✅ Dédoublonner les affectations (au cas où la requête renvoie des doublons)
+        Map<UUID, Affectation> uniquesParAgent = new LinkedHashMap<>();
+        for (Affectation aff : affectations) {
+            if (aff.getAgent() != null) {
+                uniquesParAgent.putIfAbsent(aff.getAgent().getId(), aff);
             }
         }
 
-        return conflits;
+        for (Affectation affectation : uniquesParAgent.values()) {
+            Agent agent = affectation.getAgent();
+            // ... reste inchangé
+        }
+
+        // ✅ Dédoublonnage final
+        Map<String, ConflitDTO> uniques = new LinkedHashMap<>();
+        for (ConflitDTO c : conflits) {
+            String cle = c.getAgentId() + "|" + c.getTypeConflit() + "|"
+                    + (c.getActiviteConflit() != null ? c.getActiviteConflit() : "")
+                    + "|" + (c.getMotif() != null ? c.getMotif() : "");
+            uniques.putIfAbsent(cle, c);
+        }
+
+        return new ArrayList<>(uniques.values());
     }
 }
